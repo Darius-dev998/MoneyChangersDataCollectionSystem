@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- The circular pattern/background -->
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="#FFFFFF" />
+        </shape>
+    </item>
+
+    <!-- The actual logo centered -->
+    <!-- Note: We use gravity center and scale it to fit the safe zone (approx 66% of total icon size) -->
+    <item
+        android:drawable="@drawable/logo_bg"
+        android:gravity="center"
+        android:width="72dp"
+        android:height="72dp" />
+</layer-list>
