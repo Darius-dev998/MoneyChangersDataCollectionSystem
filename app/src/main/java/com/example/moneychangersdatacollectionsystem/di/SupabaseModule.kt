@@ -1,5 +1,6 @@
 package com.example.moneychangersdatacollectionsystem.di
 
+import com.example.moneychangersdatacollectionsystem.BuildConfig
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -17,15 +18,12 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object SupabaseModule {
 
-    private const val SUPABASE_URL = "https://sxlexgyxiafoqzfkocng.supabase.co"
-    private const val SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4bGV4Z3l4aWFmb3F6ZmtvY25nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0ODM0NzgsImV4cCI6MjA4ODA1OTQ3OH0.nQByeohACFN_4FNrJzc1cru-LiRM8N2LnZ0HilJT6hs"
-
     @Provides
     @Singleton
     fun provideSupabaseClient(): SupabaseClient {
         return createSupabaseClient(
-            supabaseUrl = SUPABASE_URL,
-            supabaseKey = SUPABASE_KEY
+            supabaseUrl = BuildConfig.SUPABASE_URL,
+            supabaseKey = BuildConfig.SUPABASE_KEY
         ) {
             install(Auth)
             install(Postgrest)

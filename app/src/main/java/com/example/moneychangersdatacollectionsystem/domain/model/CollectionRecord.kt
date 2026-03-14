@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class PersonDetail(
-    val id: String = "",
+    val id: String = "", // PRS-XXXX
     val name: String = "",
     val contact: String = "",
     @SerialName("origin_county")
@@ -40,7 +40,7 @@ data class PersonDetail(
 
 @Serializable
 data class CollectionRecord(
-    val id: String,
+    val id: String, // Category specific: FRX-XXXX, UMB-XXXX, etc.
     @SerialName("agent_id")
     val agentId: String = "",
     val county: String = "",
@@ -66,6 +66,8 @@ data class CollectionRecord(
     val idCardPhotoUrl: String = "",
     @SerialName("persons")
     val persons: List<PersonDetail> = emptyList(),
+    
+    // Global fields for non-Forex categories
     @SerialName("origin_county")
     val originCounty: String = "",
     @SerialName("money_remittance")
@@ -86,10 +88,13 @@ data class CollectionRecord(
     val maritalStatus: String = "",
     @SerialName("physical_address")
     val physicalAddress: String = "",
+    
+    // Profile for non-Forex
     @SerialName("person_name")
     val personName: String = "",
     @SerialName("nationality")
     val nationality: String = "",
+
     @SerialName("sync_status")
     val syncStatus: SyncStatus = SyncStatus.PENDING,
     val timestamp: Long = System.currentTimeMillis()

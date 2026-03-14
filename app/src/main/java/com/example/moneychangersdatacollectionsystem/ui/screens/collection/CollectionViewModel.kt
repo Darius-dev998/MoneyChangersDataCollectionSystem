@@ -29,8 +29,15 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.util.UUID
 import javax.inject.Inject
+
+sealed class PhotoTarget {
+    object GlobalIndividual : PhotoTarget()
+    object GlobalIdCard : PhotoTarget()
+    data class PersonIdCard(val index: Int) : PhotoTarget()
+}
+
+enum class PhotoType { INDIVIDUAL, ID_CARD }
 
 @HiltViewModel
 class CollectionViewModel @Inject constructor(
@@ -40,7 +47,7 @@ class CollectionViewModel @Inject constructor(
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
-    // Constants
+    // List of countries for search filters
     val countries = listOf(
         "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria", "Azerbaijan",
         "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan", "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi",
@@ -54,7 +61,7 @@ class CollectionViewModel @Inject constructor(
         "Jamaica", "Japan", "Jordan",
         "Kazakhstan", "Kenya", "Kiribati", "Kuwait", "Kyrgyzstan",
         "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania", "Luxembourg",
-        "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar (formerly Burma)",
+        "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Marshall Islands", "Mauritania", "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar (formerly Burma)",
         "Namibia", "Nauru", "Nepal", "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Korea", "North Macedonia", "Norway",
         "Oman",
         "Pakistan", "Palau", "Palestine State", "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland", "Portugal",
@@ -68,7 +75,7 @@ class CollectionViewModel @Inject constructor(
         "Zambia", "Zimbabwe"
     )
 
-    // Advanced Search Console State
+    // Advanced Search Console State - ALL 14 FIELDS
     private val _searchId = MutableStateFlow("")
     val searchId = _searchId.asStateFlow()
     private val _searchName = MutableStateFlow("")
@@ -169,7 +176,6 @@ class CollectionViewModel @Inject constructor(
     val maritalStatus: StateFlow<String> = _maritalStatus.asStateFlow()
     private val _physicalAddress = MutableStateFlow("")
     val physicalAddress: StateFlow<String> = _physicalAddress.asStateFlow()
-
     private val _personName = MutableStateFlow("")
     val personName: StateFlow<String> = _personName.asStateFlow()
     private val _nationality = MutableStateFlow("")
@@ -195,14 +201,6 @@ class CollectionViewModel @Inject constructor(
     val exportMessage: StateFlow<String?> = _exportMessage.asStateFlow()
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
-
-    sealed class PhotoTarget {
-        object GlobalIndividual : PhotoTarget()
-        object GlobalIdCard : PhotoTarget()
-        data class PersonIdCard(val index: Int) : PhotoTarget()
-    }
-
-    enum class PhotoType { INDIVIDUAL, ID_CARD } 
 
     data class PersonInput(
         val name: String = "",
@@ -282,24 +280,20 @@ class CollectionViewModel @Inject constructor(
     fun onPersonNameChanged(value: String) { _personName.value = value }
     fun onNationalityChanged(value: String) { _nationality.value = value }
 
-    private val _currentPhotoTarget = MutableStateFlow<PhotoTarget?>(null)
-    val currentPhotoTarget: StateFlow<PhotoTarget?> = _currentPhotoTarget.asStateFlow()
-
     fun onPhotoCaptured(uri: Uri, target: PhotoTarget) {
-        _currentPhotoTarget.value = target
-        _currentPhotoToCrop.value = uri
-        _navigateToCropper.value = true
+        _currentPhotoTarget.value = target; _currentPhotoToCrop.value = uri; _navigateToCropper.value = true
     }
-
+    private val _currentPhotoTarget = MutableStateFlow<PhotoTarget?>(null)
+    
     fun onPhotoCaptured(uri: Uri, type: PhotoType) {
         val target = if (type == PhotoType.INDIVIDUAL) PhotoTarget.GlobalIndividual else PhotoTarget.GlobalIdCard
         onPhotoCaptured(uri, target)
     }
 
     fun onPhotoCropped(uri: Uri) {
-        when (val target = _currentPhotoTarget.value) {
-            is PhotoTarget.GlobalIndividual -> _individualPhoto.value = uri
-            is PhotoTarget.GlobalIdCard -> _idCardPhoto.value = uri
+        when (val target = _currentPhotoTarget.value) { 
+            PhotoTarget.GlobalIndividual -> _individualPhoto.value = uri
+            PhotoTarget.GlobalIdCard -> _idCardPhoto.value = uri
             is PhotoTarget.PersonIdCard -> {
                 val currentList = _persons.value.toMutableList()
                 if (target.index in currentList.indices) {
@@ -307,113 +301,48 @@ class CollectionViewModel @Inject constructor(
                     _persons.value = currentList
                 }
             }
-            null -> {}
+            null -> {} 
         }
-        _currentPhotoToCrop.value = null
-        _navigateToCropper.value = false
+        _currentPhotoToCrop.value = null; _navigateToCropper.value = false
     }
-
     fun resetCropperNavigation() { _navigateToCropper.value = false }
     fun refreshFromRemote() {
-        viewModelScope.launch { 
-            _isLoading.value = true
-            try { 
-                withContext(Dispatchers.IO) { collectionRepository.syncFromRemote() } 
-                triggerSync() // Also trigger upload of pending records on refresh
-            } catch (e: Exception) { 
-                _error.value = "Refresh Error: ${e.message}" 
-            } finally { 
-                _isLoading.value = false 
-            } 
-        }
+        viewModelScope.launch { _isLoading.value = true; try { withContext(Dispatchers.IO) { collectionRepository.syncFromRemote() } } catch (e: Exception) { _error.value = "Refresh Error: ${e.message}" } finally { _isLoading.value = false } }
     }
     fun collectGps() {
         viewModelScope.launch { _isLoading.value = true; _error.value = null; try { val location = withContext(Dispatchers.IO) { locationHelper.getCurrentLocation() }; if (location != null) { _latitude.value = location.latitude; _longitude.value = location.longitude } else { _error.value = "Failed GPS" } } catch (e: Exception) { _error.value = e.message } finally { _isLoading.value = false } }
     }
-
-    private suspend fun getNextSerial(prefix: String?, startAt: Int): Int = withContext(Dispatchers.IO) {
+    private suspend fun getNextSerial(prefix: String, startAt: Int): Int = withContext(Dispatchers.IO) {
         val all = collectionRepository.getCollections().first()
-        val businessPrefixes = listOf("FRX", "STR", "UMB", "WOU", "KSK")
-        
-        val filtered = if (prefix == "PRS") {
-            all.filter { it.id.startsWith("PRS") }
-        } else {
-            // For business categories, check all business prefixes to ensure global uniqueness
-            all.filter { rec -> businessPrefixes.any { rec.id.startsWith(it) } }
-        }
-        
-        val existingSerials = filtered.mapNotNull { it.id.substringAfter("-").toIntOrNull() }
-        val max = existingSerials.maxOrNull() ?: (startAt - 1)
-        max + 1
+        val existingSerials = all.filter { it.id.startsWith(prefix) }.mapNotNull { it.id.substringAfter("-").toIntOrNull() }
+        val max = existingSerials.maxOrNull() ?: (startAt - 1); max + 1
     }
-
     fun saveCollection() {
         viewModelScope.launch {
             val isForex = _category.value == BusinessCategory.FOREX_BUREAU
-            
-            // Validation logic
-            val baseValidation = _county.value.isNotBlank() && _category.value != null && _individualPhoto.value != null && _latitude.value != 0.0
-            val forexValidation = if (isForex) {
-                _businessName.value.isNotBlank() && _persons.value.isNotEmpty() && _persons.value.all { it.name.isNotBlank() && it.idCardPhoto != null }
-            } else {
-                _idCardPhoto.value != null && _personName.value.isNotBlank() && _businessName.value.isNotBlank()
-            }
-
-            if (!baseValidation || !forexValidation) { 
-                _error.value = "Please complete all required fields including Business Name and photos"
-                return@launch 
-            }
-
+            if (_county.value.isBlank() || (isForex && _businessName.value.isBlank()) || _category.value == null || _individualPhoto.value == null || _idCardPhoto.value == null) { _error.value = "Fields required"; return@launch }
             _isLoading.value = true; try {
                 val agent = withContext(Dispatchers.IO) { authRepository.currentUser.first() } ?: throw Exception("Auth error")
-                val categoryPrefix = _category.value?.code ?: "REC"
-                
-                // Get next serial (Global across business categories)
-                val nextBusinessSerial = getNextSerial(null, 20002)
-                val recordId = "$categoryPrefix-$nextBusinessSerial"
-                
+                val categoryPrefix = _category.value?.code ?: "REC"; val nextBusinessSerial = getNextSerial(categoryPrefix, 20002); val recordId = "$categoryPrefix-$nextBusinessSerial"
                 var nextPersonSerial = getNextSerial("PRS", 202601)
-                
-                val personDetails = _persons.value.map { input -> 
-                    PersonDetail(
-                        id = "PRS-${nextPersonSerial++}", 
-                        name = input.name, 
-                        contact = input.contact, 
-                        originCounty = input.originCounty, 
-                        moneyRemittance = input.moneyRemittance, 
-                        educationStatus = input.educationStatus, 
-                        emergencyContactName = input.emergencyContactName, 
-                        emergencyContactNumber = input.emergencyContactNumber, 
-                        emergencyContactAddress = input.emergencyContactAddress,
-                        hasBankAccount = input.hasBankAccount, 
-                        ownerOperatorStatus = input.ownerOperatorStatus, 
-                        maritalStatus = input.maritalStatus, 
-                        physicalAddress = input.physicalAddress, 
-                        nationality = input.nationality, 
-                        idType = input.idType, 
-                        idNumber = input.idNumber,
-                        idCardPhotoUrl = input.idCardPhoto.toString()
-                    ) 
-                }
-                
+                val personDetails = _persons.value.map { input -> PersonDetail(id = "PRS-${nextPersonSerial++}", name = input.name, contact = input.contact, originCounty = input.originCounty, moneyRemittance = input.moneyRemittance, educationStatus = input.educationStatus, emergencyContactName = input.emergencyContactName, emergencyContactNumber = input.emergencyContactNumber, emergencyContactAddress = input.emergencyContactAddress, hasBankAccount = input.hasBankAccount, ownerOperatorStatus = input.ownerOperatorStatus, maritalStatus = input.maritalStatus, physicalAddress = input.physicalAddress, nationality = input.nationality, idType = input.idType, idNumber = input.idNumber, idCardPhotoUrl = input.idCardPhoto.toString()) }
                 val finalUmbrellaType = if (_category.value == BusinessCategory.UMBRELLA) { if (_umbrellaType.value == "Other") _otherUmbrellaType.value else _umbrellaType.value } else null
-                
                 val record = CollectionRecord(
                     id = recordId, 
-                    agentId = agent.badgeNumber.ifBlank { agent.id }, 
+                    agentId = agent.id, 
                     county = _county.value, 
                     category = _category.value!!.displayName, 
                     umbrellaType = finalUmbrellaType, 
-                    businessName = if (_businessName.value.isNotBlank()) _businessName.value else _category.value!!.displayName,
+                    businessName = if (isForex) _businessName.value else _category.value!!.displayName, 
                     personCount = if (isForex) _personCount.value.toIntOrNull() else null, 
                     gender = if (isForex) null else _gender.value, 
                     idType = if (isForex) "" else _idType.value, 
                     idNumber = if (isForex) "" else _idNumber.value, 
-                    contactNumber = if (isForex) _contactNumber.value else "", 
+                    contactNumber = if (isForex) "" else _contactNumber.value, 
                     latitude = _latitude.value, 
                     longitude = _longitude.value, 
                     photoUrl = _individualPhoto.value.toString(), 
-                    idCardPhotoUrl = if (isForex) "" else _idCardPhoto.value.toString(), 
+                    idCardPhotoUrl = _idCardPhoto.value.toString(), 
                     persons = personDetails, 
                     originCounty = if (!isForex) _originCounty.value else "", 
                     moneyRemittance = if (!isForex) _moneyRemittance.value else null, 
@@ -428,11 +357,7 @@ class CollectionViewModel @Inject constructor(
                     personName = if (!isForex) _personName.value else "",
                     nationality = if (!isForex) _nationality.value else ""
                 )
-                withContext(Dispatchers.IO) { collectionRepository.saveCollection(record) }.onSuccess { 
-                    _saveSuccess.value = true
-                    triggerSync() // CRITICAL: Start the upload immediately!
-                    resetForm() 
-                }.onFailure { _error.value = "Save Failed" }
+                withContext(Dispatchers.IO) { collectionRepository.saveCollection(record) }.onSuccess { _saveSuccess.value = true; triggerSync(); resetForm() }.onFailure { _error.value = "Save Failed" }
             } catch (e: Exception) { _error.value = e.message } finally { _isLoading.value = false }
         }
     }
@@ -450,15 +375,7 @@ class CollectionViewModel @Inject constructor(
         }
     }
     fun clearExportMessage() { _exportMessage.value = null }
-    private fun triggerSync() { 
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
-        val req = OneTimeWorkRequestBuilder<SyncWorker>()
-            .setConstraints(constraints)
-            .build()
-        WorkManager.getInstance(context).enqueue(req) 
-    }
+    private fun triggerSync() { val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build(); val req = OneTimeWorkRequestBuilder<SyncWorker>().setConstraints(constraints).build(); WorkManager.getInstance(context).enqueue(req) }
     private fun resetFormFields() { _umbrellaType.value = ""; _otherUmbrellaType.value = ""; _businessName.value = ""; _personCount.value = ""; _persons.value = emptyList(); _gender.value = ""; _idType.value = ""; _idNumber.value = ""; _contactNumber.value = ""; _originCounty.value = ""; _moneyRemittance.value = null; _educationStatus.value = ""; _emergencyContactName.value = ""; _emergencyContactNumber.value = ""; _emergencyContactAddress.value = ""; _hasBankAccount.value = null; _ownerOperatorStatus.value = ""; _maritalStatus.value = ""; _physicalAddress.value = ""; _personName.value = ""; _nationality.value = ""; _error.value = null; _idCardPhoto.value = null; _individualPhoto.value = null }
     private fun resetForm() { _county.value = ""; _category.value = null; resetFormFields(); _latitude.value = 0.0; _longitude.value = 0.0 }
     fun logout() { viewModelScope.launch { authRepository.logout() } }
