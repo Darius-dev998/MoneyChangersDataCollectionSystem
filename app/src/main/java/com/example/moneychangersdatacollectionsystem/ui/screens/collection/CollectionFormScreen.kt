@@ -7,7 +7,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -285,7 +284,7 @@ fun CollectionFormScreen(
                             Text(text = error!!, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 8.dp))
                         }
 
-                        Button(onClick = { viewModel.saveCollection() }, modifier = Modifier.fillMaxWidth().height(64.dp), enabled = !isLoading && county.isNotBlank() && category != null, shape = MaterialTheme.shapes.large) {
+                        Button(onClick = { viewModel.saveCollection() }, modifier = Modifier.fillMaxWidth().height(64.dp), enabled = !isLoading && county.isNotBlank(), shape = MaterialTheme.shapes.large) {
                             if (isLoading) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp)) else Text("FINALIZE COLLECTION", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
                         }
                     }
@@ -394,11 +393,13 @@ fun YesNoButton(label: String, selected: Boolean, onClick: () -> Unit, modifier:
 
 @Composable
 fun GPSDataSurface(latitude: Double, longitude: Double, onUpdate: () -> Unit) {
+    val latText = if (latitude == 0.0) "Not set" else "%.6f".format(latitude)
+    val lonText = if (longitude == 0.0) "Not set" else "%.6f".format(longitude)
     Surface(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("GPS Data", fontWeight = FontWeight.Bold)
-            Text("Lat: ${if (latitude == 0.0) "Not set" else "%.6f".format(latitude)}", fontSize = 12.sp)
-            Text("Lon: ${if (longitude == 0.0) "Not set" else "%.6f".format(longitude)}", fontSize = 12.sp)
+            Text("Lat: $latText", fontSize = 12.sp)
+            Text("Lon: $lonText", fontSize = 12.sp)
             Button(onClick = onUpdate, modifier = Modifier.padding(top = 12.dp).fillMaxWidth()) { Text("UPDATE GPS COORDINATES") }
         }
     }
@@ -441,10 +442,11 @@ fun PhotoCaptureSlot(label: String, photoUri: Uri?, onCaptureClick: () -> Unit) 
                 Image(painter = rememberAsyncImagePainter(photoUri), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             }
         }
+        val btnText = if (photoUri == null) "CAPTURE IMAGE" else "RETAKE IMAGE"
         OutlinedButton(onClick = onCaptureClick, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium) {
             Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text(if (photoUri == null) "CAPTURE IMAGE" else "RETAKE IMAGE")
+            Text(btnText)
         }
     }
 }
@@ -458,9 +460,11 @@ fun DropdownSelector(label: String, options: List<String>, selectedOption: Strin
 
     ExposedDropdownMenuBox(
         expanded = expanded,
-        onExpandedChange = {
-            expanded = it
-            if (!it) searchText = ""
+        onExpandedChange = { isExpanded ->
+            expanded = isExpanded
+            if (!isExpanded) {
+                searchText = ""
+            }
         }
     ) {
         OutlinedTextField(

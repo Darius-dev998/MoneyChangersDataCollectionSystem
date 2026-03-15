@@ -9,6 +9,7 @@ import com.example.moneychangersdatacollectionsystem.data.local.dao.CollectionDa
 import com.example.moneychangersdatacollectionsystem.data.local.entity.toDomain
 import com.example.moneychangersdatacollectionsystem.data.local.entity.toEntity
 import com.example.moneychangersdatacollectionsystem.domain.model.CollectionRecord
+import com.example.moneychangersdatacollectionsystem.domain.model.PersonDetail
 import com.example.moneychangersdatacollectionsystem.domain.model.SyncStatus
 import com.example.moneychangersdatacollectionsystem.domain.repository.CollectionRepository
 import io.github.jan.supabase.SupabaseClient
@@ -16,6 +17,7 @@ import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -116,9 +118,27 @@ class CollectionRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun resetSyncStatus(oldStatus: SyncStatus, newStatus: SyncStatus): Result<Unit> {
+        return try {
+            collectionDao.resetSyncStatus(oldStatus, newStatus)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     override suspend fun updatePhotoUrls(id: String, photoUrl: String, idCardUrl: String): Result<Unit> {
         return try {
             collectionDao.updatePhotoUrls(id, photoUrl, idCardUrl)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun updatePersonPhotoUrls(id: String, persons: List<PersonDetail>): Result<Unit> {
+        return try {
+            collectionDao.updatePersons(id, persons)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -141,6 +161,12 @@ class CollectionRepositoryImpl @Inject constructor(
         return try {
             Log.d("CollectionRepo", "Starting Smart Sync from Supabase...")
             
+            // Get all local pending or syncing IDs to avoid overwriting them
+            val localUnsyncedIds = collectionDao.getAllCollections().first()
+                .filter { it.syncStatus != SyncStatus.SYNCED }
+                .map { it.id }
+                .toSet()
+
             // 1. Fetch data from Supabase in batches
             val batchSize = 1000
             var offset = 0
@@ -158,7 +184,11 @@ class CollectionRepositoryImpl @Inject constructor(
                 if (remoteRecords.isEmpty()) {
                     hasMore = false
                 } else {
-                    val entities = remoteRecords.map { it.copy(syncStatus = SyncStatus.SYNCED).toEntity() }
+                    // FILTER: Only keep records that don't have pending changes locally
+                    val entities = remoteRecords
+                        .filter { it.id !in localUnsyncedIds }
+                        .map { it.copy(syncStatus = SyncStatus.SYNCED).toEntity() }
+
                     collectionDao.insertCollections(entities)
                     
                     totalSynced += remoteRecords.size

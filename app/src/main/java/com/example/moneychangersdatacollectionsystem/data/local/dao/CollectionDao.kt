@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.example.moneychangersdatacollectionsystem.data.local.entity.CollectionEntity
+import com.example.moneychangersdatacollectionsystem.domain.model.PersonDetail
 import com.example.moneychangersdatacollectionsystem.domain.model.SyncStatus
 import kotlinx.coroutines.flow.Flow
 
@@ -66,8 +67,14 @@ interface CollectionDao {
     @Query("UPDATE collections SET syncStatus = :status WHERE id = :id")
     suspend fun updateSyncStatus(id: String, status: SyncStatus)
 
+    @Query("UPDATE collections SET syncStatus = :newStatus WHERE syncStatus = :oldStatus")
+    suspend fun resetSyncStatus(oldStatus: SyncStatus, newStatus: SyncStatus)
+
     @Query("UPDATE collections SET photoUrl = :photoUrl, idCardPhotoUrl = :idCardUrl WHERE id = :id")
     suspend fun updatePhotoUrls(id: String, photoUrl: String, idCardUrl: String)
+
+    @Query("UPDATE collections SET persons = :persons WHERE id = :id")
+    suspend fun updatePersons(id: String, persons: List<PersonDetail>)
 
     @Query("DELETE FROM collections WHERE id = :id")
     suspend fun deleteCollection(id: String)

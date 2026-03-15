@@ -35,7 +35,7 @@ class AuthRepositoryImpl @Inject constructor(
 
             val user = auth.currentUserOrNull() ?: throw Exception("Login failed: User not found in Auth")
 
-            // FETCH BY EMAIL: This fixes the AGT-001 vs UUID issue
+            // FETCH BY EMAIL: This ensures every logged in agent has a verified profile in our DB
             val agentResponse = try {
                 postgrest.from("agents")
                     .select {
@@ -46,14 +46,9 @@ class AuthRepositoryImpl @Inject constructor(
                     .decodeSingle<Agent>()
             } catch (e: Exception) {
                 Log.e("AuthRepo", "Agent profile not found for email $email. Error: ${e.message}")
-                // Fallback: Use the Auth user info
-                Agent(
-                    id = user.id,
-                    email = email,
-                    fullName = "Field Officer",
-                    badgeNumber = "Pending",
-                    role = "OFFICER"
-                )
+                // Logout if profile fetch fails to avoid "Ghost Officers"
+                auth.signOut()
+                throw Exception("Unauthorized: Your agent profile was not found. Please contact the administrator.")
             }
 
             // Save to local database

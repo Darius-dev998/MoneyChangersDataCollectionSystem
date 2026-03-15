@@ -97,6 +97,7 @@ data class CollectionRecord(
 
     @SerialName("sync_status")
     val syncStatus: SyncStatus = SyncStatus.PENDING,
+    @SerialName("timestamp")
     val timestamp: Long = System.currentTimeMillis()
 )
 

@@ -524,18 +524,19 @@ fun RecordDetailDialog(record: CollectionRecord, onDismiss: () -> Unit) {
                 }
                 
                 if (record.persons.isNotEmpty()) {
-                    Text(text = "Individuals Profile (${record.persons.size})", fontWeight = FontWeight.Black, fontSize = 16.sp, modifier = Modifier.padding(top = 8.dp))
-                    record.persons.forEach { person ->
-                        Card(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                            shape = MaterialTheme.shapes.medium
-                        ) {
-                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(text = person.name, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                                Text(text = "Contact: ${person.contact}", fontSize = 13.sp)
-                                Text(text = "Role: ${person.ownerOperatorStatus}", fontSize = 13.sp)
-                                Text(text = "Address: ${person.physicalAddress}", fontSize = 13.sp)
+                    DetailGroup("Individuals Profile (${record.persons.size})") {
+                        record.persons.forEach { person ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                                shape = MaterialTheme.shapes.medium
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(text = person.name, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                    Text(text = "Contact: ${person.contact}", fontSize = 13.sp)
+                                    Text(text = "Role: ${person.ownerOperatorStatus}", fontSize = 13.sp)
+                                    Text(text = "Address: ${person.physicalAddress}", fontSize = 13.sp)
+                                }
                             }
                         }
                     }
@@ -561,7 +562,13 @@ fun RecordDetailDialog(record: CollectionRecord, onDismiss: () -> Unit) {
 @Composable
 fun DetailGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column(modifier = Modifier.padding(vertical = 4.dp)) {
-        Text(text = title, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(bottom = 4.dp))
+        Text(
+            text = title, 
+            fontWeight = FontWeight.ExtraBold, 
+            fontSize = 14.sp, 
+            color = MaterialTheme.colorScheme.primary, 
+            modifier = Modifier.padding(bottom = 6.dp)
+        )
         content()
         HorizontalDivider(modifier = Modifier.padding(top = 8.dp), thickness = 0.5.dp, color = Color.LightGray)
     }

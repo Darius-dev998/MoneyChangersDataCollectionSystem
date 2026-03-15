@@ -39,49 +39,60 @@ class SyncWorker @AssistedInject constructor(
                 try {
                     repository.updateSyncStatus(record.id, SyncStatus.SYNCING)
 
-                    // 1. Upload Photos to Supabase Storage
+                    // 1. Prepare files for upload and cleanup
                     var finalPhotoUrl = record.photoUrl
                     var finalIdCardUrl = record.idCardPhotoUrl
-                    
-                    val originalPhotoUri = record.photoUrl
-                    val originalIdCardUri = record.idCardPhotoUrl
+                    val filesToCleanup = mutableListOf<String>()
 
-                    // Upload Individual Photo if it's a local URI
-                    if (finalPhotoUrl.startsWith("content://") || finalPhotoUrl.startsWith("file://")) {
-                        Log.d("SyncWorker", "Uploading individual photo for ${record.id}")
+                    // 2. Upload Main Photos
+                    if (isLocalUri(finalPhotoUrl)) {
+                        filesToCleanup.add(finalPhotoUrl)
                         finalPhotoUrl = uploadFile(record.id, "individual", finalPhotoUrl)
                     }
 
-                    // Upload ID Card Photo if it's a local URI
-                    if (finalIdCardUrl.startsWith("content://") || finalIdCardUrl.startsWith("file://")) {
-                        Log.d("SyncWorker", "Uploading ID card photo for ${record.id}")
+                    if (isLocalUri(finalIdCardUrl)) {
+                        filesToCleanup.add(finalIdCardUrl)
                         finalIdCardUrl = uploadFile(record.id, "id_card", finalIdCardUrl)
                     }
 
-                    // 2. Update local record with public URLs before sending to remote
+                    // Update local record main URLs
                     repository.updatePhotoUrls(record.id, finalPhotoUrl, finalIdCardUrl)
 
-                    // 3. Upsert to Postgrest (Remote Database)
+                    // 3. Upload Nested Person Photos (for Forex Bureau)
+                    val updatedPersons = record.persons.map { person ->
+                        if (isLocalUri(person.idCardPhotoUrl)) {
+                            filesToCleanup.add(person.idCardPhotoUrl)
+                            val remoteUrl = uploadFile(person.id, "person_id_card", person.idCardPhotoUrl)
+                            person.copy(idCardPhotoUrl = remoteUrl)
+                        } else {
+                            person
+                        }
+                    }
+                    
+                    if (updatedPersons != record.persons) {
+                        repository.updatePersonPhotoUrls(record.id, updatedPersons)
+                    }
+
+                    // 4. Send the complete record with remote URLs to Supabase Database
                     val finalRecord = record.copy(
                         photoUrl = finalPhotoUrl,
                         idCardPhotoUrl = finalIdCardUrl,
+                        persons = updatedPersons,
                         syncStatus = SyncStatus.SYNCED 
                     )
                     
                     Log.d("SyncWorker", "Sending record ${record.id} to Supabase Database...")
-                    val response = supabaseClient.postgrest.from("collections").upsert(finalRecord)
+                    supabaseClient.postgrest.from("collections").upsert(finalRecord)
                     
-                    // 4. If successful, update local status and cleanup
+                    // 5. Success! Mark as SYNCED and cleanup local files
                     repository.updateSyncStatus(record.id, SyncStatus.SYNCED)
-                    Log.d("SyncWorker", "SUCCESS: Record ${record.id} is now LIVE on Supabase")
+                    Log.d("SyncWorker", "SUCCESS: Record ${record.id} is now LIVE")
                     
-                    cleanupLocalFile(originalPhotoUri)
-                    cleanupLocalFile(originalIdCardUri)
+                    filesToCleanup.forEach { cleanupLocalFile(it) }
                     
                 } catch (e: Exception) {
                     Log.e("SyncWorker", "FAILED to sync record ${record.id}: ${e.localizedMessage}")
                     repository.updateSyncStatus(record.id, SyncStatus.FAILED)
-                    // We don't return Result.retry() here immediately so we can try the next record
                 }
             }
 
@@ -92,40 +103,48 @@ class SyncWorker @AssistedInject constructor(
         }
     }
 
+    private fun isLocalUri(uri: String): Boolean {
+        return uri.startsWith("content://") || uri.startsWith("file://")
+    }
+
     private suspend fun uploadFile(recordId: String, type: String, uriString: String): String {
         return try {
             val uri = Uri.parse(uriString)
-            val inputStream = applicationContext.contentResolver.openInputStream(uri)
-            val bytes = inputStream?.readBytes() ?: throw Exception("Could not read bytes from $uriString")
-            inputStream.close()
-
-            val fileName = "${recordId.replace("/", "_")}/${type}_${System.currentTimeMillis()}.jpg"
-            val bucket = supabaseClient.storage.from("collection-photos")
-            bucket.upload(fileName, bytes)
-            bucket.publicUrl(fileName)
+            val inputStream = applicationContext.contentResolver.openInputStream(uri) 
+                ?: throw Exception("Could not open stream for $uriString")
+            
+            inputStream.use { input ->
+                val bytes = input.readBytes()
+                val fileName = "${recordId.replace("/", "_")}/${type}_${System.currentTimeMillis()}.jpg"
+                val bucket = supabaseClient.storage.from("collection-photos")
+                bucket.upload(fileName, bytes)
+                bucket.publicUrl(fileName)
+            }
         } catch (e: Exception) {
-            Log.e("SyncWorker", "File upload error ($type): ${e.message}")
+            Log.e("SyncWorker", "File upload error ($type) for $recordId: ${e.message}")
             throw e
         }
     }
     
     private fun cleanupLocalFile(uriString: String) {
         try {
-            if (uriString.startsWith("file://")) {
-                val path = uriString.substringAfter("file://")
-                val file = File(path)
+            val uri = Uri.parse(uriString)
+            if (uri.scheme == "file") {
+                val file = File(uri.path ?: return)
                 if (file.exists()) {
-                    file.delete()
+                    val deleted = file.delete()
+                    Log.d("SyncWorker", "Cleanup: Deleted local file $uriString -> $deleted")
                 }
             } else if (uriString.contains("/files/collections/")) {
-                val path = uriString.substringAfter("content://${applicationContext.packageName}.fileprovider/my_files")
-                val file = File(applicationContext.filesDir, path)
+                val path = uriString.substringAfter("/files/collections/")
+                val file = File(File(applicationContext.filesDir, "collections"), path)
                 if (file.exists()) {
-                    file.delete()
+                    val deleted = file.delete()
+                    Log.d("SyncWorker", "Cleanup: Deleted internal file $path -> $deleted")
                 }
             }
         } catch (e: Exception) {
-            Log.e("SyncWorker", "Cleanup failed: ${e.message}")
+            Log.e("SyncWorker", "Cleanup failed for $uriString: ${e.message}")
         }
     }
 }
