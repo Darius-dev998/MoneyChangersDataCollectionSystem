@@ -1,5 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    res/values/colors.xml
+
+    FIX: launch_background added.
+    Without a windowBackground on the theme, a white flash appears during
+    the cold start before the first Compose frame renders on the Topwise T1.
+    The brand blue matches the Compose theme primary and eliminates the flash.
+
+    The template default colors (purple_200, teal_200, etc.) are retained for
+    the adaptive launcher icon — ic_launcher_background uses the brand blue.
+-->
 <resources>
+    <!-- Default template colors (used by adaptive launcher icon) -->
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
     <color name="purple_700">#FF3700B3</color>
@@ -7,5 +19,14 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Launcher icon background — brand blue -->
     <color name="ic_launcher_background">#0D47A1</color>
+
+    <!-- Cold start window background — shown before first Compose frame.
+         Matches BluePrimary in Color.kt to eliminate white flash on launch. -->
+    <color name="launch_background">#0D47A1</color>
+
+    <!-- Dark mode launch background — slightly lighter to avoid full black -->
+    <color name="launch_background_dark">#1A237E</color>
 </resources>

@@ -46,7 +46,6 @@ fun HistoryScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val exportMessage by viewModel.exportMessage.collectAsState()
 
-    // Search Filter States
     val searchId by viewModel.searchId.collectAsState()
     val searchName by viewModel.searchName.collectAsState()
     val searchCounty by viewModel.searchCounty.collectAsState()
@@ -65,11 +64,20 @@ fun HistoryScreen(
     var selectedRecord by remember { mutableStateOf<CollectionRecord?>(null) }
     var isSearchConsoleExpanded by remember { mutableStateOf(false) }
 
-    val counties = listOf("Montserrado", "Nimba", "Lofa", "Grand Bassa", "Bong", "Margibi", "Grand Gedeh", "Sinoe", "River Cess", "Grand Cape Mount", "Bomi", "Maryland", "River Gee", "Gbarpolu", "Grand Kru")
+    val counties = listOf(
+        "Montserrado", "Nimba", "Lofa", "Grand Bassa", "Bong", "Margibi",
+        "Grand Gedeh", "Sinoe", "River Cess", "Grand Cape Mount", "Bomi",
+        "Maryland", "River Gee", "Gbarpolu", "Grand Kru"
+    )
     val categories = BusinessCategory.entries.map { it.displayName }
     val maritalStatuses = listOf("Single", "Married", "Divorced", "Widowed")
-    val educationStatuses = listOf("None", "Primary", "Junior High", "Senior High", "Vocational/Technical", "Associate Degree", "Bachelor's Degree", "Master's Degree", "Doctorate")
-    val idTypes = listOf("NIR (National ID)", "Passport", "Driver's License", "Voter's Card", "Resident Permit")
+    val educationStatuses = listOf(
+        "None", "Primary", "Junior High", "Senior High", "Vocational/Technical",
+        "Associate Degree", "Bachelor's Degree", "Master's Degree", "Doctorate"
+    )
+    val idTypes = listOf(
+        "NIR (National ID)", "Passport", "Driver's License", "Voter's Card", "Resident Permit"
+    )
     val genders = listOf("Male", "Female")
     val roles = listOf("Owner", "Operator")
 
@@ -80,7 +88,6 @@ fun HistoryScreen(
         }
     }
 
-    // Live Search Trigger
     LaunchedEffect(searchId, searchName, searchAgentId, searchAddress, searchNationality) {
         viewModel.executeSearch()
     }
@@ -97,14 +104,14 @@ fun HistoryScreen(
                 actions = {
                     IconButton(onClick = { isSearchConsoleExpanded = !isSearchConsoleExpanded }) {
                         Icon(
-                            imageVector = if (isSearchConsoleExpanded) Icons.Default.FilterListOff else Icons.Default.FilterList, 
+                            imageVector = if (isSearchConsoleExpanded) Icons.Default.FilterListOff
+                            else Icons.Default.FilterList,
                             contentDescription = "Toggle Search"
                         )
                     }
                     IconButton(onClick = { viewModel.exportToCSV() }) {
                         Icon(Icons.Default.FileDownload, contentDescription = "Export CSV")
                     }
-                    // Explicit Refresh Button
                     IconButton(onClick = { viewModel.refreshFromRemote() }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                     }
@@ -119,7 +126,7 @@ fun HistoryScreen(
         }
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            // Advanced Search Dashboard
+
             AnimatedVisibility(
                 visible = isSearchConsoleExpanded,
                 enter = expandVertically() + fadeIn(),
@@ -135,8 +142,12 @@ fun HistoryScreen(
                             .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Text("Filters Dashboard", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        
+                        Text(
+                            "Filters Dashboard",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             SearchField(value = searchId, onValueChange = viewModel::onSearchIdChanged, label = "Record ID", modifier = Modifier.weight(1f))
                             SearchField(value = searchName, onValueChange = viewModel::onSearchNameChanged, label = "Business Name", modifier = Modifier.weight(1f))
@@ -173,14 +184,13 @@ fun HistoryScreen(
                         }
 
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            OutlinedButton(onClick = { viewModel.clearFilters(); viewModel.executeSearch() }, modifier = Modifier.weight(1f), shape = MaterialTheme.shapes.medium) {
-                                Text("CLEAR ALL")
-                            }
+                            OutlinedButton(
+                                onClick = { viewModel.clearFilters(); viewModel.executeSearch() },
+                                modifier = Modifier.weight(1f),
+                                shape = MaterialTheme.shapes.medium
+                            ) { Text("CLEAR ALL") }
                             Button(
-                                onClick = { 
-                                    viewModel.executeSearch()
-                                    isSearchConsoleExpanded = false 
-                                }, 
+                                onClick = { viewModel.executeSearch(); isSearchConsoleExpanded = false },
                                 modifier = Modifier.weight(1.5f),
                                 shape = MaterialTheme.shapes.medium
                             ) {
@@ -193,21 +203,18 @@ fun HistoryScreen(
                 }
             }
 
-            // Results List with Pull to Refresh
             PullToRefreshBox(
                 isRefreshing = isLoading,
                 onRefresh = { viewModel.refreshFromRemote() },
                 modifier = Modifier.fillMaxSize()
             ) {
                 if (lazyPagingItems.itemCount == 0 && !isLoading) {
-                    Box(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()), contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                imageVector = Icons.Default.Search, 
-                                contentDescription = null, 
-                                modifier = Modifier.size(64.dp), 
-                                tint = Color.Gray
-                            )
+                            Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(64.dp), tint = Color.Gray)
                             Spacer(Modifier.height(16.dp))
                             Text("No matching records found", style = MaterialTheme.typography.headlineSmall, color = Color.Gray)
                             Text("Try adjusting your filters", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
@@ -225,10 +232,7 @@ fun HistoryScreen(
                         ) { index ->
                             val record = lazyPagingItems[index]
                             record?.let {
-                                HistoryItem(
-                                    record = it, 
-                                    onClick = { selectedRecord = it }
-                                )
+                                HistoryItem(record = it, onClick = { selectedRecord = it })
                             }
                         }
                     }
@@ -236,18 +240,19 @@ fun HistoryScreen(
             }
         }
 
-        // Detail Dialog
         selectedRecord?.let { record ->
-            RecordDetailDialog(
-                record = record,
-                onDismiss = { selectedRecord = null }
-            )
+            RecordDetailDialog(record = record, onDismiss = { selectedRecord = null })
         }
     }
 }
 
 @Composable
-fun SearchField(value: String, onValueChange: (String) -> Unit, label: String, modifier: Modifier = Modifier) {
+fun SearchField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier
+) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
@@ -264,13 +269,15 @@ fun SearchField(value: String, onValueChange: (String) -> Unit, label: String, m
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchDropdown(label: String, options: List<String>, selected: String, onSelected: (String) -> Unit, modifier: Modifier = Modifier) {
+fun SearchDropdown(
+    label: String,
+    options: List<String>,
+    selected: String,
+    onSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
     var expanded by remember { mutableStateOf(false) }
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it },
-        modifier = modifier
-    ) {
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }, modifier = modifier) {
         OutlinedTextField(
             value = selected,
             onValueChange = {},
@@ -278,10 +285,7 @@ fun SearchDropdown(label: String, options: List<String>, selected: String, onSel
             label = { Text(label, style = TextStyle(fontSize = 14.sp)) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable),
-            colors = OutlinedTextFieldDefaults.colors(
-                unfocusedContainerColor = Color.White,
-                focusedContainerColor = Color.White
-            ),
+            colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = Color.White, focusedContainerColor = Color.White),
             shape = MaterialTheme.shapes.medium
         )
         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
@@ -326,14 +330,8 @@ fun SearchableFilterDropdown(
     }
 
     if (showDialog) {
-        Dialog(
-            onDismissRequest = { showDialog = false },
-            properties = DialogProperties(usePlatformDefaultWidth = false)
-        ) {
-            Surface(
-                modifier = Modifier.fillMaxSize(),
-                color = MaterialTheme.colorScheme.surface
-            ) {
+        Dialog(onDismissRequest = { showDialog = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+            Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
                 Column(modifier = Modifier.fillMaxSize()) {
                     TopAppBar(
                         title = { Text("Filter by $label") },
@@ -343,27 +341,19 @@ fun SearchableFilterDropdown(
                             }
                         }
                     )
-                    
                     OutlinedTextField(
                         value = searchText,
                         onValueChange = { searchText = it },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
                         placeholder = { Text("Type to search...") },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                         shape = MaterialTheme.shapes.medium
                     )
-
                     LazyColumn(modifier = Modifier.weight(1f)) {
                         item {
                             ListItem(
                                 headlineContent = { Text("-- Clear Filter --", color = Color.Red, fontWeight = FontWeight.Bold) },
-                                modifier = Modifier.clickable {
-                                    onSelected("")
-                                    showDialog = false
-                                    searchText = ""
-                                }
+                                modifier = Modifier.clickable { onSelected(""); showDialog = false; searchText = "" }
                             )
                             HorizontalDivider(thickness = 0.5.dp)
                         }
@@ -371,11 +361,7 @@ fun SearchableFilterDropdown(
                             val option = filteredOptions[index]
                             ListItem(
                                 headlineContent = { Text(option) },
-                                modifier = Modifier.clickable {
-                                    onSelected(option)
-                                    showDialog = false
-                                    searchText = ""
-                                }
+                                modifier = Modifier.clickable { onSelected(option); showDialog = false; searchText = "" }
                             )
                             HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray)
                         }
@@ -388,22 +374,17 @@ fun SearchableFilterDropdown(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchYesNo(label: String, selected: Boolean?, onSelected: (Boolean?) -> Unit, modifier: Modifier = Modifier) {
+fun SearchYesNo(
+    label: String,
+    selected: Boolean?,
+    onSelected: (Boolean?) -> Unit,
+    modifier: Modifier = Modifier
+) {
     Column(modifier = modifier) {
         Text(label, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            FilterChip(
-                selected = selected == true,
-                onClick = { onSelected(if (selected == true) null else true) },
-                label = { Text("Yes", fontSize = 12.sp) },
-                modifier = Modifier.weight(1f)
-            )
-            FilterChip(
-                selected = selected == false,
-                onClick = { onSelected(if (selected == false) null else false) },
-                label = { Text("No", fontSize = 12.sp) },
-                modifier = Modifier.weight(1f)
-            )
+            FilterChip(selected = selected == true, onClick = { onSelected(if (selected == true) null else true) }, label = { Text("Yes", fontSize = 12.sp) }, modifier = Modifier.weight(1f))
+            FilterChip(selected = selected == false, onClick = { onSelected(if (selected == false) null else false) }, label = { Text("No", fontSize = 12.sp) }, modifier = Modifier.weight(1f))
         }
     }
 }
@@ -414,9 +395,7 @@ fun HistoryItem(record: CollectionRecord, onClick: () -> Unit) {
     val dateString = dateFormat.format(Date(record.timestamp))
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(containerColor = Color.White)
@@ -428,20 +407,9 @@ fun HistoryItem(record: CollectionRecord, onClick: () -> Unit) {
                 verticalAlignment = Alignment.Top
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = record.businessName,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 22.sp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = record.id,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Gray
-                    )
+                    Text(text = record.businessName, fontWeight = FontWeight.Black, fontSize = 22.sp, color = MaterialTheme.colorScheme.primary)
+                    Text(text = record.id, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
                 }
-                
                 Surface(
                     color = if (record.syncStatus == SyncStatus.SYNCED) Color(0xFFE8F5E9) else Color(0xFFFFEBEE),
                     shape = RoundedCornerShape(8.dp)
@@ -454,30 +422,20 @@ fun HistoryItem(record: CollectionRecord, onClick: () -> Unit) {
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(12.dp))
-            
+
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.Category, 
-                    contentDescription = null, 
-                    modifier = Modifier.size(16.dp), 
-                    tint = Color.Gray
-                )
+                Icon(imageVector = Icons.Default.Category, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.Gray)
                 Spacer(Modifier.width(8.dp))
                 Text(text = record.category, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
             }
-            
+
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.5.dp, color = Color.LightGray)
-            
+
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Place, 
-                        contentDescription = null, 
-                        modifier = Modifier.size(16.dp), 
-                        tint = MaterialTheme.colorScheme.secondary
-                    )
+                    Icon(imageVector = Icons.Default.Place, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.secondary)
                     Spacer(Modifier.width(4.dp))
                     Text(text = record.county, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                 }
@@ -487,10 +445,30 @@ fun HistoryItem(record: CollectionRecord, onClick: () -> Unit) {
     }
 }
 
+/**
+ * RecordDetailDialog — Full record detail view.
+ *
+ * FIX: GPS display crash fixed.
+ *
+ * Original: "%.4f, %.4f".format(record.latitude, record.longitude)
+ * record.latitude and record.longitude are now Double? (nullable).
+ * Calling String.format() with null Double arguments throws NullPointerException
+ * at runtime when any record without GPS coordinates is tapped.
+ *
+ * Fix: null-safe display — shows "%.4f, %.4f" format when both values
+ * are present, "Not captured" when either is null.
+ */
 @Composable
 fun RecordDetailDialog(record: CollectionRecord, onDismiss: () -> Unit) {
     val dateFormat = SimpleDateFormat("dd MMM yyyy, HH:mm:ss", Locale.getDefault())
     val dateString = dateFormat.format(Date(record.timestamp))
+
+    // FIX: Null-safe GPS string — record.latitude/longitude are Double?
+    val gpsText = if (record.latitude != null && record.longitude != null) {
+        "%.4f, %.4f".format(record.latitude, record.longitude)
+    } else {
+        "Not captured"
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -502,9 +480,7 @@ fun RecordDetailDialog(record: CollectionRecord, onDismiss: () -> Unit) {
         },
         text = {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
+                modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 DetailGroup("Identity & Origin") {
@@ -522,7 +498,7 @@ fun RecordDetailDialog(record: CollectionRecord, onDismiss: () -> Unit) {
                     DetailRow("Bank Account", if (record.hasBankAccount == true) "YES" else if (record.hasBankAccount == false) "NO" else "N/A")
                     DetailRow("Remittance", if (record.moneyRemittance == true) "YES" else if (record.moneyRemittance == false) "NO" else "N/A")
                 }
-                
+
                 if (record.persons.isNotEmpty()) {
                     DetailGroup("Individuals Profile (${record.persons.size})") {
                         record.persons.forEach { person ->
@@ -546,7 +522,8 @@ fun RecordDetailDialog(record: CollectionRecord, onDismiss: () -> Unit) {
                     DetailRow("Agent ID", record.shortAgentId)
                     DetailRow("Current County", record.county)
                     DetailRow("Physical Address", record.physicalAddress)
-                    DetailRow("GPS", "%.4f, %.4f".format(record.latitude, record.longitude))
+                    // FIX: null-safe GPS display — was "%.4f, %.4f".format(record.latitude, record.longitude)
+                    DetailRow("GPS", gpsText)
                     DetailRow("Captured On", dateString)
                 }
             }
@@ -562,13 +539,7 @@ fun RecordDetailDialog(record: CollectionRecord, onDismiss: () -> Unit) {
 @Composable
 fun DetailGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column(modifier = Modifier.padding(vertical = 4.dp)) {
-        Text(
-            text = title, 
-            fontWeight = FontWeight.ExtraBold, 
-            fontSize = 14.sp, 
-            color = MaterialTheme.colorScheme.primary, 
-            modifier = Modifier.padding(bottom = 6.dp)
-        )
+        Text(text = title, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(bottom = 6.dp))
         content()
         HorizontalDivider(modifier = Modifier.padding(top = 8.dp), thickness = 0.5.dp, color = Color.LightGray)
     }

@@ -1,4 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    res/xml/file_paths.xml
+
+    REQUIRED FOR FILEPROVIDER: Declares every directory that FileProvider
+    is allowed to serve URIs for. Any directory NOT listed here causes:
+      IllegalArgumentException: Failed to find configured root that contains [path]
+
+    DIRECTORIES USED BY THIS APP:
+      1. filesDir/Pictures/   — camera temp photos (CollectionFormScreen)
+      2. filesDir/collections/ — permanent local photo storage (CollectionViewModel)
+      3. cacheDir/            — fallback camera cache on some devices
+-->
 <paths>
-    <files-path name="my_images" path="Pictures/" />
+
+    <!--
+        Camera capture temp files.
+        CollectionFormScreen saves camera output here before the ViewModel
+        copies the file to the permanent "collections" directory.
+        Maps to: context.filesDir/Pictures/
+    -->
+    <files-path
+        name="internal_pictures"
+        path="Pictures/" />
+
+    <!--
+        Permanent local photo storage.
+        CollectionViewModel.copyUriToInternalStorage() saves all captured
+        photos here before SyncWorker uploads them to Supabase Storage.
+        Maps to: context.filesDir/collections/
+    -->
+    <files-path
+        name="internal_collections"
+        path="collections/" />
+
+    <!--
+        External cache fallback for camera on devices where internal
+        storage is insufficient (some OEM camera apps require this).
+        Maps to: context.externalCacheDir/
+    -->
+    <external-cache-path
+        name="external_cache"
+        path="." />
+
 </paths>

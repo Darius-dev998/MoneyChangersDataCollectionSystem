@@ -35,6 +35,21 @@ import com.example.moneychangersdatacollectionsystem.domain.model.BusinessCatego
 import com.example.moneychangersdatacollectionsystem.ui.components.FinTechBackground
 import java.io.File
 
+/**
+ * CollectionFormScreen — Data collection form for money changer registration.
+ *
+ * FIXES APPLIED:
+ *  #1  GPSDataSurface signature changed from Double to Double?.
+ *      ViewModel latitude/longitude are now StateFlow<Double?> (null = not acquired).
+ *      The composable must accept nullable values and display "Not set" for null.
+ *      The 0.0 check replaced with != null check.
+ *
+ *  FILE_PATHS NOTE: Camera photos are saved to context.filesDir/Pictures/.
+ *  The file_paths.xml MUST contain:
+ *      <files-path name="internal_pictures" path="Pictures/" />
+ *  Otherwise FileProvider.getUriForFile() throws IllegalArgumentException at runtime.
+ *  The fixed file_paths.xml is provided in the foundation batch outputs.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CollectionFormScreen(
@@ -54,7 +69,6 @@ fun CollectionFormScreen(
     val idNumber by viewModel.idNumber.collectAsState()
     val contactNumber by viewModel.contactNumber.collectAsState()
 
-    // Global Profile Fields
     val personName by viewModel.personName.collectAsState()
     val nationality by viewModel.nationality.collectAsState()
     val originCounty by viewModel.originCounty.collectAsState()
@@ -68,36 +82,55 @@ fun CollectionFormScreen(
     val maritalStatus by viewModel.maritalStatus.collectAsState()
     val physicalAddress by viewModel.physicalAddress.collectAsState()
 
+    // FIX #1: latitude/longitude are now Double? — collected as nullable
     val latitude by viewModel.latitude.collectAsState()
     val longitude by viewModel.longitude.collectAsState()
+
     val individualPhoto by viewModel.individualPhoto.collectAsState()
     val idCardPhoto by viewModel.idCardPhoto.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val saveSuccess by viewModel.saveSuccess.collectAsState()
     val error by viewModel.error.collectAsState()
 
-    val counties = listOf("Montserrado", "Nimba", "Lofa", "Grand Bassa", "Bong", "Margibi", "Grand Gedeh", "Sinoe", "River Cess", "Grand Cape Mount", "Bomi", "Maryland", "River Gee", "Gbarpolu", "Grand Kru")
-    val idTypes = listOf("NIR (National ID)", "Passport", "Driver's License", "Voter's Card", "Resident Permit")
+    val counties = listOf(
+        "Montserrado", "Nimba", "Lofa", "Grand Bassa", "Bong", "Margibi",
+        "Grand Gedeh", "Sinoe", "River Cess", "Grand Cape Mount", "Bomi",
+        "Maryland", "River Gee", "Gbarpolu", "Grand Kru"
+    )
+    val idTypes = listOf(
+        "NIR (National ID)", "Passport", "Driver's License", "Voter's Card", "Resident Permit"
+    )
     val genders = listOf("Male", "Female")
     val umbrellaTypes = listOf("Lone Star \"MTN\"", "Orange", "Other")
     val maritalStatuses = listOf("Single", "Married", "Divorced", "Widowed")
-    val educationStatuses = listOf("None", "Primary", "Junior High", "Senior High", "Vocational/Technical", "Associate Degree", "Bachelor's Degree", "Master's Degree", "Doctorate")
+    val educationStatuses = listOf(
+        "None", "Primary", "Junior High", "Senior High", "Vocational/Technical",
+        "Associate Degree", "Bachelor's Degree", "Master's Degree", "Doctorate"
+    )
     val ownerOperatorOptions = listOf("Owner", "Operator")
 
     var tempPhotoUri by remember { mutableStateOf<Uri?>(null) }
     var currentTarget by remember { mutableStateOf<PhotoTarget?>(null) }
 
-    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+    val cameraLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicture()
+    ) { success ->
         if (success && tempPhotoUri != null && currentTarget != null) {
             viewModel.onPhotoCaptured(tempPhotoUri!!, currentTarget!!)
         }
     }
 
-    val cameraPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
         if (isGranted) {
-            val file = File(context.filesDir, "Pictures").apply { if (!exists()) mkdirs() }
-            val photoFile = File(file, "IMG_${System.currentTimeMillis()}.jpg")
-            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", photoFile)
+            // NOTE: "Pictures" directory must be declared in file_paths.xml:
+            //   <files-path name="internal_pictures" path="Pictures/" />
+            val dir = File(context.filesDir, "Pictures").apply { if (!exists()) mkdirs() }
+            val photoFile = File(dir, "IMG_${System.currentTimeMillis()}.jpg")
+            val uri = FileProvider.getUriForFile(
+                context, "${context.packageName}.fileprovider", photoFile
+            )
             tempPhotoUri = uri
             cameraLauncher.launch(uri)
         } else {
@@ -109,8 +142,7 @@ fun CollectionFormScreen(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
-            permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
-        ) {
+            permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true) {
             viewModel.collectGps()
         } else {
             Toast.makeText(context, "Location permission denied", Toast.LENGTH_SHORT).show()
@@ -119,7 +151,7 @@ fun CollectionFormScreen(
 
     LaunchedEffect(saveSuccess) {
         if (saveSuccess) {
-            Toast.makeText(context, "Record saved and syncing...", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Record saved — syncing in background", Toast.LENGTH_SHORT).show()
             onNavigateBack()
         }
     }
@@ -156,19 +188,40 @@ fun CollectionFormScreen(
                 // Section 1: Location & Category
                 item {
                     FormSectionCard(title = "Location & Category", icon = Icons.Default.Settings) {
-                        DropdownSelector(label = "Current County", options = counties, selectedOption = county, onOptionSelected = { viewModel.onCountyChanged(it) })
+                        DropdownSelector(
+                            label = "Current County",
+                            options = counties,
+                            selectedOption = county,
+                            onOptionSelected = { viewModel.onCountyChanged(it) }
+                        )
                         Spacer(modifier = Modifier.height(12.dp))
-                        DropdownSelector(label = "Business Category", options = BusinessCategory.entries.map { it.displayName }, selectedOption = category?.displayName ?: "", onOptionSelected = { name ->
-                            BusinessCategory.entries.find { it.displayName == name }?.let { viewModel.onCategoryChanged(it) }
-                        })
+                        DropdownSelector(
+                            label = "Business Category",
+                            options = BusinessCategory.entries.map { it.displayName },
+                            selectedOption = category?.displayName ?: "",
+                            onOptionSelected = { name ->
+                                BusinessCategory.entries.find { it.displayName == name }
+                                    ?.let { viewModel.onCategoryChanged(it) }
+                            }
+                        )
                         AnimatedVisibility(visible = category == BusinessCategory.UMBRELLA) {
                             Column {
                                 Spacer(modifier = Modifier.height(12.dp))
-                                DropdownSelector(label = "Select Umbrella Type", options = umbrellaTypes, selectedOption = umbrellaType, onOptionSelected = { viewModel.onUmbrellaTypeChanged(it) })
+                                DropdownSelector(
+                                    label = "Select Umbrella Type",
+                                    options = umbrellaTypes,
+                                    selectedOption = umbrellaType,
+                                    onOptionSelected = { viewModel.onUmbrellaTypeChanged(it) }
+                                )
                                 AnimatedVisibility(visible = umbrellaType == "Other") {
                                     Column {
                                         Spacer(modifier = Modifier.height(12.dp))
-                                        OutlinedTextField(value = otherUmbrellaType, onValueChange = { viewModel.onOtherUmbrellaTypeChanged(it) }, label = { Text("Specify Other Umbrella Type", style = TextStyle(fontSize = 18.sp)) }, modifier = Modifier.fillMaxWidth())
+                                        OutlinedTextField(
+                                            value = otherUmbrellaType,
+                                            onValueChange = { viewModel.onOtherUmbrellaTypeChanged(it) },
+                                            label = { Text("Specify Other Umbrella Type", style = TextStyle(fontSize = 18.sp)) },
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
                                     }
                                 }
                             }
@@ -182,9 +235,20 @@ fun CollectionFormScreen(
                     if (isForex) {
                         item {
                             FormSectionCard(title = "Forex Bureau Details", icon = Icons.Default.Business) {
-                                OutlinedTextField(value = businessName, onValueChange = { viewModel.onBusinessNameChanged(it) }, label = { Text("Bureau Name", style = TextStyle(fontSize = 18.sp)) }, modifier = Modifier.fillMaxWidth())
+                                OutlinedTextField(
+                                    value = businessName,
+                                    onValueChange = { viewModel.onBusinessNameChanged(it) },
+                                    label = { Text("Bureau Name", style = TextStyle(fontSize = 18.sp)) },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
                                 Spacer(modifier = Modifier.height(12.dp))
-                                OutlinedTextField(value = personCount, onValueChange = { viewModel.onPersonCountChanged(it) }, label = { Text("Number of Persons Inside", style = TextStyle(fontSize = 18.sp)) }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                                OutlinedTextField(
+                                    value = personCount,
+                                    onValueChange = { viewModel.onPersonCountChanged(it) },
+                                    label = { Text("Number of Persons Inside", style = TextStyle(fontSize = 18.sp)) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                                )
                             }
                         }
 
@@ -206,10 +270,14 @@ fun CollectionFormScreen(
                             )
                         }
                     } else {
-                        // Profile Information for non-Forex
                         item {
                             FormSectionCard(title = "Person Profile", icon = Icons.Default.Person) {
-                                OutlinedTextField(value = personName, onValueChange = { viewModel.onPersonNameChanged(it) }, label = { Text("Full Name", style = TextStyle(fontSize = 18.sp)) }, modifier = Modifier.fillMaxWidth())
+                                OutlinedTextField(
+                                    value = personName,
+                                    onValueChange = { viewModel.onPersonNameChanged(it) },
+                                    label = { Text("Full Name", style = TextStyle(fontSize = 18.sp)) },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
                                 Spacer(modifier = Modifier.height(12.dp))
                                 DropdownSelector(label = "Nationality", options = viewModel.countries, selectedOption = nationality, onOptionSelected = { viewModel.onNationalityChanged(it) })
                                 Spacer(modifier = Modifier.height(12.dp))
@@ -270,22 +338,49 @@ fun CollectionFormScreen(
                             Spacer(modifier = Modifier.height(12.dp))
                             OutlinedTextField(value = contactNumber, onValueChange = { viewModel.onContactNumberChanged(it) }, label = { Text("Direct Contact Number", style = TextStyle(fontSize = 18.sp)) }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone))
                             Spacer(modifier = Modifier.height(12.dp))
-                            PhotoCaptureSlot(label = getCategoryPhotoLabel(category), photoUri = individualPhoto, onCaptureClick = {
-                                currentTarget = PhotoTarget.GlobalIndividual
-                                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                            })
+                            PhotoCaptureSlot(
+                                label = getCategoryPhotoLabel(category),
+                                photoUri = individualPhoto,
+                                onCaptureClick = {
+                                    currentTarget = PhotoTarget.GlobalIndividual
+                                    cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                                }
+                            )
                             Spacer(modifier = Modifier.height(16.dp))
-                            GPSDataSurface(latitude = latitude, longitude = longitude) { locationPermissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) }
+                            // FIX #1: latitude/longitude passed as Double? — GPSDataSurface accepts nullable
+                            GPSDataSurface(
+                                latitude = latitude,
+                                longitude = longitude
+                            ) {
+                                locationPermissionLauncher.launch(
+                                    arrayOf(
+                                        Manifest.permission.ACCESS_FINE_LOCATION,
+                                        Manifest.permission.ACCESS_COARSE_LOCATION
+                                    )
+                                )
+                            }
                         }
                     }
 
                     item {
                         if (error != null) {
-                            Text(text = error!!, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 8.dp))
+                            Text(
+                                text = error!!,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            )
                         }
-
-                        Button(onClick = { viewModel.saveCollection() }, modifier = Modifier.fillMaxWidth().height(64.dp), enabled = !isLoading && county.isNotBlank(), shape = MaterialTheme.shapes.large) {
-                            if (isLoading) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp)) else Text("FINALIZE COLLECTION", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+                        Button(
+                            onClick = { viewModel.saveCollection() },
+                            modifier = Modifier.fillMaxWidth().height(64.dp),
+                            enabled = !isLoading && county.isNotBlank(),
+                            shape = MaterialTheme.shapes.large
+                        ) {
+                            if (isLoading) {
+                                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                            } else {
+                                Text("FINALIZE COLLECTION", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+                            }
                         }
                     }
                 }
@@ -315,13 +410,22 @@ fun PersonProfileCard(
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(modifier = Modifier.size(32.dp), shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)) {
+                Surface(
+                    modifier = Modifier.size(32.dp),
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text("${index + 1}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     }
                 }
                 Spacer(modifier = Modifier.width(12.dp))
-                Text(text = "Person ${index + 1} Profile", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
+                Text(
+                    text = "Person ${index + 1} Profile",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
             Spacer(modifier = Modifier.height(20.dp))
 
@@ -391,16 +495,43 @@ fun YesNoButton(label: String, selected: Boolean, onClick: () -> Unit, modifier:
     }
 }
 
+/**
+ * FIX #1: Signature changed from (Double, Double) to (Double?, Double?).
+ *
+ * ViewModel latitude/longitude are now StateFlow<Double?> — null means GPS
+ * was not acquired. The composable must handle null gracefully.
+ *
+ * The old `== 0.0` check is replaced with `!= null` since 0.0 is no longer
+ * used as a sentinel — it was the Gulf of Guinea bug we fixed at the data layer.
+ */
 @Composable
-fun GPSDataSurface(latitude: Double, longitude: Double, onUpdate: () -> Unit) {
-    val latText = if (latitude == 0.0) "Not set" else "%.6f".format(latitude)
-    val lonText = if (longitude == 0.0) "Not set" else "%.6f".format(longitude)
-    Surface(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)) {
+fun GPSDataSurface(latitude: Double?, longitude: Double?, onUpdate: () -> Unit) {
+    val latText = latitude?.let { "%.6f".format(it) } ?: "Not set"
+    val lonText = longitude?.let { "%.6f".format(it) } ?: "Not set"
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("GPS Data", fontWeight = FontWeight.Bold)
-            Text("Lat: $latText", fontSize = 12.sp)
-            Text("Lon: $lonText", fontSize = 12.sp)
-            Button(onClick = onUpdate, modifier = Modifier.padding(top = 12.dp).fillMaxWidth()) { Text("UPDATE GPS COORDINATES") }
+            Text(
+                text = "Lat: $latText",
+                fontSize = 12.sp,
+                color = if (latitude != null) MaterialTheme.colorScheme.onSurface else Color.Gray
+            )
+            Text(
+                text = "Lon: $lonText",
+                fontSize = 12.sp,
+                color = if (longitude != null) MaterialTheme.colorScheme.onSurface else Color.Gray
+            )
+            Button(
+                onClick = onUpdate,
+                modifier = Modifier.padding(top = 12.dp).fillMaxWidth()
+            ) {
+                Text(if (latitude != null) "RE-SYNC GPS COORDINATES" else "CAPTURE GPS COORDINATES")
+            }
         }
     }
 }
@@ -417,12 +548,27 @@ private fun getCategoryPhotoLabel(category: BusinessCategory?): String {
 }
 
 @Composable
-fun FormSectionCard(title: String, icon: ImageVector, content: @Composable ColumnScope.() -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraLarge, colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
+fun FormSectionCard(
+    title: String,
+    icon: ImageVector,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(modifier = Modifier.size(32.dp), shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)) {
-                    Box(contentAlignment = Alignment.Center) { Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary) }
+                Surface(
+                    modifier = Modifier.size(32.dp),
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                    }
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(text = title, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
@@ -438,22 +584,39 @@ fun PhotoCaptureSlot(label: String, photoUri: Uri?, onCaptureClick: () -> Unit) 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(text = label, fontWeight = FontWeight.Bold, fontSize = 14.sp)
         if (photoUri != null) {
-            Card(modifier = Modifier.fillMaxWidth().height(180.dp), shape = MaterialTheme.shapes.large, elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
-                Image(painter = rememberAsyncImagePainter(photoUri), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            Card(
+                modifier = Modifier.fillMaxWidth().height(180.dp),
+                shape = MaterialTheme.shapes.large,
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Image(
+                    painter = rememberAsyncImagePainter(photoUri),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
             }
         }
-        val btnText = if (photoUri == null) "CAPTURE IMAGE" else "RETAKE IMAGE"
-        OutlinedButton(onClick = onCaptureClick, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium) {
+        OutlinedButton(
+            onClick = onCaptureClick,
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.medium
+        ) {
             Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text(btnText)
+            Text(if (photoUri == null) "CAPTURE IMAGE" else "RETAKE IMAGE")
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DropdownSelector(label: String, options: List<String>, selectedOption: String, onOptionSelected: (String) -> Unit) {
+fun DropdownSelector(
+    label: String,
+    options: List<String>,
+    selectedOption: String,
+    onOptionSelected: (String) -> Unit
+) {
     var expanded by remember { mutableStateOf(false) }
     var searchText by remember { mutableStateOf("") }
     val filteredOptions = options.filter { it.contains(searchText, ignoreCase = true) }
@@ -462,39 +625,24 @@ fun DropdownSelector(label: String, options: List<String>, selectedOption: Strin
         expanded = expanded,
         onExpandedChange = { isExpanded ->
             expanded = isExpanded
-            if (!isExpanded) {
-                searchText = ""
-            }
+            if (!isExpanded) searchText = ""
         }
     ) {
         OutlinedTextField(
             value = if (expanded) searchText else selectedOption,
-            onValueChange = {
-                searchText = it
-                expanded = true
-            },
+            onValueChange = { searchText = it; expanded = true },
             label = { Text(label, style = TextStyle(fontSize = 18.sp)) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .menuAnchor(MenuAnchorType.PrimaryEditable),
+            modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryEditable),
             colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
             shape = MaterialTheme.shapes.medium
         )
-
         if (filteredOptions.isNotEmpty()) {
-            ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
+            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 filteredOptions.forEach { selectionOption ->
                     DropdownMenuItem(
                         text = { Text(selectionOption) },
-                        onClick = {
-                            onOptionSelected(selectionOption)
-                            searchText = ""
-                            expanded = false
-                        },
+                        onClick = { onOptionSelected(selectionOption); searchText = ""; expanded = false },
                         contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
                     )
                 }

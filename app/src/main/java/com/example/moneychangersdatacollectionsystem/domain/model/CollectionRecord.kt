@@ -3,9 +3,17 @@ package com.example.moneychangersdatacollectionsystem.domain.model
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+/**
+ * PersonDetail — Individual person within a Forex Bureau registration.
+ *
+ * FIX: idCardPhotoUrl changed from String = "" to String? = null.
+ * Empty string caused Coil to attempt loading an empty URL (failed silently)
+ * and SyncWorker to attempt uploading/checking an empty path string.
+ * Null correctly represents "photo not yet captured or uploaded."
+ */
 @Serializable
 data class PersonDetail(
-    val id: String = "", // PRS-XXXX
+    val id: String = "",
     val name: String = "",
     val contact: String = "",
     @SerialName("origin_county")
@@ -34,13 +42,28 @@ data class PersonDetail(
     val idType: String = "",
     @SerialName("id_number")
     val idNumber: String = "",
+    // FIX: Was String = "". Null means "photo not yet captured/uploaded."
     @SerialName("id_card_photo_url")
-    val idCardPhotoUrl: String = ""
+    val idCardPhotoUrl: String? = null
 )
 
+/**
+ * CollectionRecord — Domain model for a money changer registration record.
+ *
+ * FIXES APPLIED:
+ *  #1  latitude/longitude changed from Double = 0.0 to Double? = null.
+ *      (0.0, 0.0) is a real GPS coordinate in the Gulf of Guinea — approx.
+ *      600km off Liberia's coast in the Atlantic Ocean. Every record saved
+ *      without a GPS fix was being mapped to the ocean. Null = "not acquired."
+ *
+ *  #2  photoUrl/idCardPhotoUrl changed from String = "" to String? = null.
+ *      Before Supabase Storage upload, the URL is unknown. Empty string caused
+ *      Coil and SyncWorker to attempt requests with an empty path. Null is
+ *      the correct sentinel for "photo captured but not yet uploaded."
+ */
 @Serializable
 data class CollectionRecord(
-    val id: String, // Category specific: FRX-XXXX, UMB-XXXX, etc.
+    val id: String,
     @SerialName("agent_id")
     val agentId: String = "",
     val county: String = "",
@@ -58,16 +81,20 @@ data class CollectionRecord(
     val idNumber: String = "",
     @SerialName("contact_number")
     val contactNumber: String = "",
-    val latitude: Double = 0.0,
-    val longitude: Double = 0.0,
+
+    // FIX #1: Nullable. Null = GPS was not acquired for this record.
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+
+    // FIX #2: Nullable. Null = photo captured on device, not yet uploaded.
     @SerialName("photo_url")
-    val photoUrl: String = "", 
+    val photoUrl: String? = null,
     @SerialName("id_card_photo_url")
-    val idCardPhotoUrl: String = "",
+    val idCardPhotoUrl: String? = null,
+
     @SerialName("persons")
     val persons: List<PersonDetail> = emptyList(),
-    
-    // Global fields for non-Forex categories
+
     @SerialName("origin_county")
     val originCounty: String = "",
     @SerialName("money_remittance")
@@ -88,13 +115,10 @@ data class CollectionRecord(
     val maritalStatus: String = "",
     @SerialName("physical_address")
     val physicalAddress: String = "",
-    
-    // Profile for non-Forex
     @SerialName("person_name")
     val personName: String = "",
     @SerialName("nationality")
     val nationality: String = "",
-
     @SerialName("sync_status")
     val syncStatus: SyncStatus = SyncStatus.PENDING,
     @SerialName("timestamp")
@@ -102,7 +126,7 @@ data class CollectionRecord(
 )
 
 val CollectionRecord.shortId: String
-    get() = id 
+    get() = id
 
 val CollectionRecord.shortAgentId: String
     get() = if (agentId.length > 8) "AGT-${agentId.take(8).uppercase()}" else agentId

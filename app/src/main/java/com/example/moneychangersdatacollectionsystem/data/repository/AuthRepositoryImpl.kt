@@ -15,46 +15,55 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * AuthRepositoryImpl — Authentication and agent profile management.
+ *
+ * FIX: Minor cleanup — removed unused `user` variable.
+ * The result of `auth.currentUserOrNull()` was assigned to `user` but only
+ * used for the null check. Simplified to a direct null-check expression.
+ *
+ * The ghost-officer prevention pattern (fetch by email, sign out on failure)
+ * is correct and retained unchanged.
+ */
 @Singleton
 class AuthRepositoryImpl @Inject constructor(
     private val supabaseClient: SupabaseClient,
     private val agentDao: AgentDao
 ) : AuthRepository {
 
-    private val auth = supabaseClient.auth
-    private val postgrest = supabaseClient.postgrest
-
     override val currentUser: Flow<Agent?> = agentDao.getLoggedInAgent().map { it?.toDomain() }
 
     override suspend fun login(email: String, password: String): Result<Unit> {
         return try {
-            auth.signInWith(Email) {
+            supabaseClient.auth.signInWith(Email) {
                 this.email = email
                 this.password = password
             }
 
-            val user = auth.currentUserOrNull() ?: throw Exception("Login failed: User not found in Auth")
+            // Verify the session was established
+            supabaseClient.auth.currentUserOrNull()
+                ?: throw Exception("Login failed: session not established after sign-in")
 
-            // FETCH BY EMAIL: This ensures every logged in agent has a verified profile in our DB
-            val agentResponse = try {
-                postgrest.from("agents")
-                    .select {
-                        filter {
-                            eq("email", email)
-                        }
-                    }
+            // Fetch agent profile from our agents table (NOT Supabase auth.users).
+            // This ensures only provisioned agents can log in — "ghost officer" prevention.
+            val agentProfile = try {
+                supabaseClient.postgrest.from("agents")
+                    .select { filter { eq("email", email) } }
                     .decodeSingle<Agent>()
             } catch (e: Exception) {
-                Log.e("AuthRepo", "Agent profile not found for email $email. Error: ${e.message}")
-                // Logout if profile fetch fails to avoid "Ghost Officers"
-                auth.signOut()
-                throw Exception("Unauthorized: Your agent profile was not found. Please contact the administrator.")
+                Log.e("AuthRepo", "Agent profile not found for $email: ${e.message}")
+                // Sign out immediately — don't leave a Supabase session for an unregistered user
+                supabaseClient.auth.signOut()
+                throw Exception(
+                    "Unauthorized: Your agent profile was not found. " +
+                            "Please contact your administrator."
+                )
             }
 
-            // Save to local database
-            agentDao.insertAgent(agentResponse.toEntity())
-
+            agentDao.insertAgent(agentProfile.toEntity())
+            Log.d("AuthRepo", "Login successful: ${agentProfile.badgeNumber}")
             Result.success(Unit)
+
         } catch (e: Exception) {
             Log.e("AuthRepo", "Login failed: ${e.message}")
             Result.failure(e)
@@ -63,15 +72,16 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun logout(): Result<Unit> {
         return try {
-            auth.signOut()
+            supabaseClient.auth.signOut()
             agentDao.clearAgents()
             Result.success(Unit)
         } catch (e: Exception) {
+            Log.e("AuthRepo", "Logout error: ${e.message}")
             Result.failure(e)
         }
     }
 
     override suspend fun getSession(): String? {
-        return auth.currentAccessTokenOrNull()
+        return supabaseClient.auth.currentAccessTokenOrNull()
     }
 }

@@ -1,5 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    res/values/themes.xml
+
+    FIX: android:windowBackground added.
+
+    The theme parent (android:Theme.Material.Light.NoActionBar) is correct
+    for a Compose-only app — confirmed in Batch 1 foundation audit.
+
+    The windowBackground item prevents the white flash seen on cold start
+    before the first Compose frame renders. Without it, the system draws
+    a white window while the Hilt + Room + Supabase initialization runs.
+    Setting it to the brand blue provides a seamless transition into the
+    SplashScreen which also has a white background that fades in.
+-->
 <resources>
 
-    <style name="Theme.MoneyChangersDataCollectionSystem" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.MoneyChangersDataCollectionSystem"
+        parent="android:Theme.Material.Light.NoActionBar">
+        <!--
+            Shown during cold start before the first Compose frame.
+            Matches BluePrimary (Color.kt 0xFF0D47A1) so there is no
+            color jump between the window background and the app UI.
+        -->
+        <item name="android:windowBackground">@color/launch_background</item>
+
+        <!-- Required for WindowCompat.setDecorFitsSystemWindows(false) in
+             MainActivity to work correctly — allows Compose to draw
+             behind the status and navigation bars. -->
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
 </resources>

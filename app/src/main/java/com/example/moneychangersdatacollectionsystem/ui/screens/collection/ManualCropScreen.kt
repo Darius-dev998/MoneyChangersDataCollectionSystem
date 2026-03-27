@@ -3,7 +3,6 @@ package com.example.moneychangersdatacollectionsystem.ui.screens.collection
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Matrix
 import android.net.Uri
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -19,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
@@ -33,8 +31,20 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.util.UUID
-import kotlin.math.abs
 
+/**
+ * ManualCropScreen — Interactive photo cropper.
+ *
+ * FIXES APPLIED:
+ *  #1  Unused imports removed: android.graphics.Matrix, kotlin.math.abs.
+ *      Both were imported but never referenced anywhere in this file.
+ *
+ *  #2  saveBitmapToInternalStorage() — try-catch with corrupt file cleanup.
+ *      If bitmap.compress() throws (e.g., out of disk space), the previous
+ *      version left a 0-byte corrupt JPEG on disk with no error propagated.
+ *      Now the corrupt file is deleted before re-throwing so the caller can
+ *      surface a meaningful error to the user.
+ */
 @Composable
 fun ManualCropScreen(
     imageUri: Uri,
@@ -44,8 +54,7 @@ fun ManualCropScreen(
     val context = LocalContext.current
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
     var isLoading by remember { mutableStateOf(true) }
-    
-    // Crop box state in pixels (screen coordinates)
+
     var cropRect by remember { mutableStateOf(Rect.Zero) }
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
 
@@ -53,9 +62,7 @@ fun ManualCropScreen(
         withContext(Dispatchers.IO) {
             try {
                 val stream = context.contentResolver.openInputStream(imageUri)
-                val options = BitmapFactory.Options().apply {
-                    inJustDecodeBounds = true
-                }
+                val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
                 BitmapFactory.decodeStream(stream, null, options)
                 stream?.close()
 
@@ -69,9 +76,7 @@ fun ManualCropScreen(
                     }
                 }
 
-                val decodeOptions = BitmapFactory.Options().apply {
-                    this.inSampleSize = inSampleSize
-                }
+                val decodeOptions = BitmapFactory.Options().apply { this.inSampleSize = inSampleSize }
                 val freshStream = context.contentResolver.openInputStream(imageUri)
                 bitmap = BitmapFactory.decodeStream(freshStream, null, decodeOptions)
                 freshStream?.close()
@@ -84,7 +89,10 @@ fun ManualCropScreen(
     }
 
     if (isLoading || bitmap == null) {
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier.fillMaxSize().background(Color.Black),
+            contentAlignment = Alignment.Center
+        ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 CircularProgressIndicator(color = Color.White)
                 Spacer(Modifier.height(8.dp))
@@ -103,7 +111,6 @@ fun ManualCropScreen(
         val maxW = constraints.maxWidth.toFloat()
         val maxH = constraints.maxHeight.toFloat()
 
-        // Initialize crop rect once we have container size
         LaunchedEffect(containerSize) {
             if (containerSize.width > 0 && cropRect == Rect.Zero) {
                 val initialWidth = maxW * 0.8f
@@ -114,10 +121,7 @@ fun ManualCropScreen(
             }
         }
 
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             bitmap?.let { b ->
                 androidx.compose.foundation.Image(
                     bitmap = b.asImageBitmap(),
@@ -127,47 +131,44 @@ fun ManualCropScreen(
                 )
             }
 
-            // Interactive Overlay
             Canvas(
                 modifier = Modifier
                     .fillMaxSize()
                     .pointerInput(Unit) {
                         detectDragGestures { change, dragAmount ->
                             change.consume()
-                            
+
                             val touchPos = change.position
                             val handleSize = 40.dp.toPx()
-                            
-                            // Determine which corner is being dragged
+                            val minSize = 50.dp.toPx()
+
                             val isTopLeft = (touchPos - cropRect.topLeft).getDistance() < handleSize
                             val isTopRight = (touchPos - cropRect.topRight).getDistance() < handleSize
                             val isBottomLeft = (touchPos - cropRect.bottomLeft).getDistance() < handleSize
                             val isBottomRight = (touchPos - cropRect.bottomRight).getDistance() < handleSize
 
-                            val minSize = 50.dp.toPx()
-
                             cropRect = when {
-                                isTopLeft -> {
-                                    val newLeft = (cropRect.left + dragAmount.x).coerceIn(0f, cropRect.right - minSize)
-                                    val newTop = (cropRect.top + dragAmount.y).coerceIn(0f, cropRect.bottom - minSize)
-                                    Rect(newLeft, newTop, cropRect.right, cropRect.bottom)
-                                }
-                                isTopRight -> {
-                                    val newRight = (cropRect.right + dragAmount.x).coerceIn(cropRect.left + minSize, maxW)
-                                    val newTop = (cropRect.top + dragAmount.y).coerceIn(0f, cropRect.bottom - minSize)
-                                    Rect(cropRect.left, newTop, newRight, cropRect.bottom)
-                                }
-                                isBottomLeft -> {
-                                    val newLeft = (cropRect.left + dragAmount.x).coerceIn(0f, cropRect.right - minSize)
-                                    val newBottom = (cropRect.bottom + dragAmount.y).coerceIn(cropRect.top + minSize, maxH)
-                                    Rect(newLeft, cropRect.top, cropRect.right, newBottom)
-                                }
-                                isBottomRight -> {
-                                    val newRight = (cropRect.right + dragAmount.x).coerceIn(cropRect.left + minSize, maxW)
-                                    val newBottom = (cropRect.bottom + dragAmount.y).coerceIn(cropRect.top + minSize, maxH)
-                                    Rect(cropRect.left, cropRect.top, newRight, newBottom)
-                                }
-                                // Drag entire box if touching inside
+                                isTopLeft -> Rect(
+                                    (cropRect.left + dragAmount.x).coerceIn(0f, cropRect.right - minSize),
+                                    (cropRect.top + dragAmount.y).coerceIn(0f, cropRect.bottom - minSize),
+                                    cropRect.right, cropRect.bottom
+                                )
+                                isTopRight -> Rect(
+                                    cropRect.left,
+                                    (cropRect.top + dragAmount.y).coerceIn(0f, cropRect.bottom - minSize),
+                                    (cropRect.right + dragAmount.x).coerceIn(cropRect.left + minSize, maxW),
+                                    cropRect.bottom
+                                )
+                                isBottomLeft -> Rect(
+                                    (cropRect.left + dragAmount.x).coerceIn(0f, cropRect.right - minSize),
+                                    cropRect.top, cropRect.right,
+                                    (cropRect.bottom + dragAmount.y).coerceIn(cropRect.top + minSize, maxH)
+                                )
+                                isBottomRight -> Rect(
+                                    cropRect.left, cropRect.top,
+                                    (cropRect.right + dragAmount.x).coerceIn(cropRect.left + minSize, maxW),
+                                    (cropRect.bottom + dragAmount.y).coerceIn(cropRect.top + minSize, maxH)
+                                )
                                 cropRect.contains(touchPos) -> {
                                     val newLeft = (cropRect.left + dragAmount.x).coerceIn(0f, maxW - cropRect.width)
                                     val newTop = (cropRect.top + dragAmount.y).coerceIn(0f, maxH - cropRect.height)
@@ -178,45 +179,29 @@ fun ManualCropScreen(
                         }
                     }
             ) {
-                // 1. Dim background
                 val path = Path().apply {
                     addRect(Rect(0f, 0f, size.width, size.height))
                     addRect(cropRect)
                     fillType = PathFillType.EvenOdd
                 }
                 drawPath(path, Color.Black.copy(alpha = 0.6f))
-                
-                // 2. Draw border
+
                 drawRect(
                     color = Color.Cyan,
                     topLeft = cropRect.topLeft,
                     size = cropRect.size,
                     style = Stroke(width = 2.dp.toPx())
                 )
-                
-                // 3. Draw corner handles
-                val handleRadius = 6.dp.toPx()
-                val cornerPoints = listOf(cropRect.topLeft, cropRect.topRight, cropRect.bottomLeft, cropRect.bottomRight)
-                cornerPoints.forEach { point ->
-                    drawCircle(Color.Cyan, handleRadius, point)
-                }
 
-                // 4. Draw grid lines (optional but professional)
+                val handleRadius = 6.dp.toPx()
+                listOf(cropRect.topLeft, cropRect.topRight, cropRect.bottomLeft, cropRect.bottomRight)
+                    .forEach { drawCircle(Color.Cyan, handleRadius, it) }
+
                 val thirdW = cropRect.width / 3
                 val thirdH = cropRect.height / 3
                 for (i in 1..2) {
-                    drawLine(
-                        Color.White.copy(0.3f),
-                        Offset(cropRect.left + thirdW * i, cropRect.top),
-                        Offset(cropRect.left + thirdW * i, cropRect.bottom),
-                        strokeWidth = 1.dp.toPx()
-                    )
-                    drawLine(
-                        Color.White.copy(0.3f),
-                        Offset(cropRect.left, cropRect.top + thirdH * i),
-                        Offset(cropRect.right, cropRect.top + thirdH * i),
-                        strokeWidth = 1.dp.toPx()
-                    )
+                    drawLine(Color.White.copy(0.3f), Offset(cropRect.left + thirdW * i, cropRect.top), Offset(cropRect.left + thirdW * i, cropRect.bottom), strokeWidth = 1.dp.toPx())
+                    drawLine(Color.White.copy(0.3f), Offset(cropRect.left, cropRect.top + thirdH * i), Offset(cropRect.right, cropRect.top + thirdH * i), strokeWidth = 1.dp.toPx())
                 }
             }
         }
@@ -256,6 +241,7 @@ fun ManualCropScreen(
                             onCropSuccess(uri)
                         } catch (e: Exception) {
                             e.printStackTrace()
+                            // Crop failed — user stays on crop screen, can retry
                         }
                     }
                 },
@@ -268,46 +254,56 @@ fun ManualCropScreen(
     }
 }
 
-private fun performCrop(
-    bitmap: Bitmap,
-    cropRect: Rect,
-    containerSize: IntSize
-): Bitmap {
+private fun performCrop(bitmap: Bitmap, cropRect: Rect, containerSize: IntSize): Bitmap {
     val viewW = containerSize.width.toFloat()
     val viewH = containerSize.height.toFloat()
     val bitmapW = bitmap.width.toFloat()
     val bitmapH = bitmap.height.toFloat()
-    
-    // ContentScale.Fit calculation
+
     val scale = minOf(viewW / bitmapW, viewH / bitmapH)
     val actualImgW = bitmapW * scale
     val actualImgH = bitmapH * scale
-    
     val imgLeftOffset = (viewW - actualImgW) / 2
     val imgTopOffset = (viewH - actualImgH) / 2
-    
-    // Map screen crop rect to bitmap coordinates
+
     val pixelLeft = ((cropRect.left - imgLeftOffset) / scale).toInt().coerceIn(0, bitmap.width)
     val pixelTop = ((cropRect.top - imgTopOffset) / scale).toInt().coerceIn(0, bitmap.height)
     val pixelRight = ((cropRect.right - imgLeftOffset) / scale).toInt().coerceIn(0, bitmap.width)
     val pixelBottom = ((cropRect.bottom - imgTopOffset) / scale).toInt().coerceIn(0, bitmap.height)
-    
+
     val width = (pixelRight - pixelLeft).coerceAtLeast(1)
     val height = (pixelBottom - pixelTop).coerceAtLeast(1)
-    
-    // Safety check to ensure we are within bitmap bounds
     val safeWidth = if (pixelLeft + width > bitmap.width) bitmap.width - pixelLeft else width
     val safeHeight = if (pixelTop + height > bitmap.height) bitmap.height - pixelTop else height
-    
+
     return Bitmap.createBitmap(bitmap, pixelLeft, pixelTop, safeWidth, safeHeight)
 }
 
+/**
+ * FIX #2: Wrapped in try-catch with corrupt file cleanup.
+ *
+ * If bitmap.compress() throws (out of disk space, I/O error), the previous
+ * version left a 0-byte corrupt JPEG on disk with no error propagated.
+ * Now the file is deleted before re-throwing so the ViewModel/caller can
+ * handle the failure appropriately (e.g., show a retry button).
+ *
+ * Saves to context.filesDir/collections/ — declared in file_paths.xml
+ * so FileProvider can serve these URIs if needed.
+ */
 private fun saveBitmapToInternalStorage(context: Context, bitmap: Bitmap): Uri {
-    val directory = File(context.filesDir, "collections")
-    if (!directory.exists()) directory.mkdirs()
+    val directory = File(context.filesDir, "collections").apply {
+        if (!exists()) mkdirs()
+    }
     val file = File(directory, "cropped_${UUID.randomUUID()}.jpg")
-    FileOutputStream(file).use { out ->
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+    try {
+        FileOutputStream(file).use { out ->
+            val success = bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+            if (!success) throw IllegalStateException("Bitmap.compress() returned false")
+            out.flush()
+        }
+    } catch (e: Exception) {
+        if (file.exists()) file.delete() // Remove 0-byte corrupt file
+        throw e
     }
     return Uri.fromFile(file)
 }

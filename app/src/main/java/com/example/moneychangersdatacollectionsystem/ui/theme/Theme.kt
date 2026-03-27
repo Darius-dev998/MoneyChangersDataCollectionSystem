@@ -11,11 +11,25 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
+/**
+ * MoneyChangersDataCollectionSystemTheme
+ *
+ * FIX: window.statusBarColor removed.
+ *
+ * `window.statusBarColor` is deprecated at API 35 (targetSdk = 35) and has
+ * no effect on Android 15+ which enforces edge-to-edge by default.
+ * `enableEdgeToEdge()` in MainActivity already handles status bar appearance
+ * correctly via `WindowCompat.setDecorFitsSystemWindows(false)`.
+ * Duplicating the status bar color here via the deprecated API causes
+ * a deprecation warning and is redundant.
+ *
+ * The `insetsController.isAppearanceLightStatusBars` call is retained —
+ * this is the correct modern API for controlling status bar icon tint.
+ */
 private val DarkColorScheme = darkColorScheme(
     primary = BluePrimary,
     secondary = GoldPrimary,
@@ -43,7 +57,6 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun MoneyChangersDataCollectionSystemTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
@@ -52,15 +65,16 @@ fun MoneyChangersDataCollectionSystemTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
+
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
+            // FIX: window.statusBarColor removed — deprecated at API 35.
+            // Status bar appearance is controlled by WindowInsetsController only.
             val insetsController = WindowCompat.getInsetsController(window, view)
             insetsController.isAppearanceLightStatusBars = !darkTheme
         }

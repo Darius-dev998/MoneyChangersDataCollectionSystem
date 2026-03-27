@@ -2,32 +2,89 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <!--  NETWORK                                                             -->
+    <!-- ─────────────────────────────────────────────────────────────────── -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <!--  LOCATION                                                            -->
+    <!-- ─────────────────────────────────────────────────────────────────── -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
-
-    <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <!--  CAMERA                                                              -->
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <!--  STORAGE (scoped to API 28 and below — unchanged)                   -->
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <!--  WORKMANAGER / BACKGROUND SYNC (all four were MISSING)              -->
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+
+    <!-- Required for WorkManager setExpedited() — throws SecurityException without it -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <!-- Required on Android 14 — ForegroundServiceTypeNotAllowedException without it -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+
+    <!-- Prevents Doze mode killing sync workers mid-upload on battery -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- Allows WorkManager to reschedule jobs after device reboot -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Android 13+ requires this to show any notification (sync status, etc.) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <!--  APPLICATION                                                         -->
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <!--
+        FIX 1: allowBackup changed to FALSE (was true).
+        This app collects financial registration data for money changers.
+        With allowBackup=true, `adb backup` can extract the entire SQLCipher
+        database — defeating the encryption entirely. Set unconditionally false.
+
+        FIX 2: usesCleartextTraffic REMOVED (was true).
+        Allowing HTTP traffic for a financial data collection system is
+        a compliance and security violation. Replaced with networkSecurityConfig
+        (see res/xml/network_security_config.xml) which enforces HTTPS
+        in release and allows cleartext only on localhost in debug.
+
+        FIX 3: networkSecurityConfig ADDED.
+        See res/xml/network_security_config.xml.
+    -->
     <application
         android:name=".MCDCSApplication"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:networkSecurityConfig="@xml/network_security_config"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:usesCleartextTraffic="true"
-        android:theme="@style/Theme.MoneyChangersDataCollectionSystem">
+        android:theme="@style/Theme.MoneyChangersDataCollectionSystem"
+        tools:targetApi="31">
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
+            android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.MoneyChangersDataCollectionSystem">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -35,9 +92,14 @@
             </intent-filter>
         </activity>
 
+        <!--
+            FIX 4: FileProvider authorities changed to use ${applicationId}.
+            Hardcoded applicationId string breaks if the applicationId ever
+            changes. Using the placeholder makes it automatically consistent.
+        -->
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="com.example.moneychangersdatacollectionsystem.fileprovider"
+            android:authorities="${applicationId}.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data
@@ -45,7 +107,20 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-        <!-- Disable default WorkManager initialization -->
+        <!--
+            FIX 5: WorkManager SystemForegroundService declaration ADDED.
+            Without this, WorkManager's lint rule SpecifyForegroundServiceType
+            fails the build with:
+              "Missing dataSync foregroundServiceType in the AndroidManifest.xml"
+            tools:node="merge" allows WorkManager's own manifest entry to merge
+            cleanly rather than creating a duplicate declaration conflict.
+        -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
+
+        <!-- WorkManager on-demand initialization via HiltWorkerFactory -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"
@@ -56,6 +131,7 @@
                 android:value="androidx.startup"
                 tools:node="remove" />
         </provider>
+
     </application>
 
 </manifest>

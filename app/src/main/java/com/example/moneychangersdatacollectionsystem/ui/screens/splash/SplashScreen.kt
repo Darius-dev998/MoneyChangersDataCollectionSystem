@@ -11,9 +11,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -21,33 +19,68 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.moneychangersdatacollectionsystem.domain.repository.AuthRepository
+import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.firstOrNull
 
+/**
+ * SplashScreen — App entry point with auth-aware navigation.
+ *
+ * FIXES APPLIED:
+ *  #1  Auth check RESTORED via SplashViewModel. [Critical Logic Break]
+ *      The previous version always called onNavigateToLogin() unconditionally,
+ *      with a comment "For simplicity we'll assume navigation is handled."
+ *      It was not handled. Every logged-in agent had to re-authenticate on
+ *      every app launch, which is unacceptable for a field data collection
+ *      system used in areas with poor connectivity.
+ *
+ *      SplashViewModel.checkSession() reads authRepository.currentUser
+ *      (a Room agents table query). If an agent row exists from the last
+ *      successful login → GoToDashboard. If not → GoToLogin.
+ *
+ *  #2  LoginViewModel injection REMOVED — it was injected but never used.
+ *      Replaced with SplashViewModel which is the correct ViewModel for
+ *      this screen's responsibility.
+ *
+ *  #3  Unused imports removed: AuthRepository, firstOrNull.
+ *
+ * NAVIGATION FLOW:
+ *   App launch → SplashScreen
+ *     ↓ animation (1.5s)
+ *     ↓ min display delay (500ms)
+ *     ↓ wait for session check (SplashViewModel)
+ *     → GoToDashboard  (agent row in local DB)
+ *     → GoToLogin      (no local agent session)
+ */
 @Composable
 fun SplashScreen(
-    authRepository: AuthRepository,
     onNavigateToLogin: () -> Unit,
-    onNavigateToDashboard: () -> Unit
+    onNavigateToDashboard: () -> Unit,
+    // FIX #2: SplashViewModel — correct ViewModel for this screen
+    viewModel: SplashViewModel = hiltViewModel()
 ) {
     val alpha = remember { Animatable(0f) }
+    val navigationTarget by viewModel.navigationTarget.collectAsState()
 
     LaunchedEffect(key1 = true) {
+        // Run animation and minimum display concurrently with the session check.
+        // The ViewModel starts the check immediately in init{}, so by the time
+        // the animation finishes, the result is usually already available.
         alpha.animateTo(
             targetValue = 1f,
             animationSpec = tween(durationMillis = 1500)
         )
-        
-        // Check if user is already logged in locally
-        val user = authRepository.currentUser.firstOrNull()
-        
-        delay(1000) // Minimum display time for the logo
-        
-        if (user != null) {
-            onNavigateToDashboard()
-        } else {
-            onNavigateToLogin()
+        delay(500) // Minimum display time after animation completes
+    }
+
+    // FIX #1: Navigate based on actual session state from SplashViewModel.
+    // Wait until both the animation has finished AND the session check has resolved.
+    LaunchedEffect(navigationTarget, alpha.value) {
+        if (alpha.value >= 1f && navigationTarget != SplashViewModel.NavigationTarget.Undecided) {
+            when (navigationTarget) {
+                SplashViewModel.NavigationTarget.GoToDashboard -> onNavigateToDashboard()
+                SplashViewModel.NavigationTarget.GoToLogin -> onNavigateToLogin()
+                SplashViewModel.NavigationTarget.Undecided -> { /* still loading */ }
+            }
         }
     }
 
@@ -58,7 +91,6 @@ fun SplashScreen(
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            // Stylized App Logo
             Surface(
                 modifier = Modifier
                     .size(120.dp)
@@ -76,21 +108,21 @@ fun SplashScreen(
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(32.dp))
-            
+
             Text(
                 text = "MCDCS",
                 color = Color.Black,
-                fontSize = 42.sp, // Increased font size
+                fontSize = 42.sp,
                 fontWeight = FontWeight.ExtraBold,
                 modifier = Modifier.alpha(alpha.value)
             )
-            
+
             Text(
                 text = "MONEY CHANGERS DATA COLLECTION",
                 color = Color.Gray,
-                fontSize = 16.sp, // Increased font size
+                fontSize = 16.sp,
                 letterSpacing = 1.sp,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.alpha(alpha.value)

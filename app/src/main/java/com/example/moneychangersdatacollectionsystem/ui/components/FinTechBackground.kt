@@ -8,12 +8,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.nativeCanvas
 import com.example.moneychangersdatacollectionsystem.ui.theme.BluePrimary
 import com.example.moneychangersdatacollectionsystem.ui.theme.IndigoCard
 import com.example.moneychangersdatacollectionsystem.ui.theme.PurpleMesh
 
+/**
+ * FinTechBackground — Shared mesh gradient background for all screens.
+ *
+ * FIX: Unused imports removed.
+ * drawIntoCanvas and nativeCanvas were imported but never referenced.
+ * They caused IDE warnings and indicated dead code.
+ */
 @Composable
 fun FinTechBackground(content: @Composable () -> Unit) {
     Box(
@@ -25,7 +30,6 @@ fun FinTechBackground(content: @Composable () -> Unit) {
             val canvasWidth = size.width
             val canvasHeight = size.height
 
-            // Professional Mesh Gradient Effect
             drawRect(
                 brush = Brush.verticalGradient(
                     colors = listOf(BluePrimary.copy(alpha = 0.1f), Color.White)

@@ -1,0 +1,441 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 6,
+    "identityHash": "af479d3f66868e1a3ab3689796e428ea",
+    "entities": [
+      {
+        "tableName": "agents",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `email` TEXT NOT NULL, `fullName` TEXT NOT NULL, `badgeNumber` TEXT NOT NULL, `role` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "email",
+            "columnName": "email",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fullName",
+            "columnName": "fullName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "badgeNumber",
+            "columnName": "badgeNumber",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "role",
+            "columnName": "role",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "collections",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `agentId` TEXT NOT NULL, `county` TEXT NOT NULL, `category` TEXT NOT NULL, `umbrellaType` TEXT, `businessName` TEXT NOT NULL, `personCount` INTEGER, `gender` TEXT, `idType` TEXT NOT NULL, `idNumber` TEXT NOT NULL, `contactNumber` TEXT NOT NULL, `latitude` REAL, `longitude` REAL, `photoUrl` TEXT, `idCardPhotoUrl` TEXT, `persons` TEXT NOT NULL, `originCounty` TEXT NOT NULL, `moneyRemittance` INTEGER, `educationStatus` TEXT NOT NULL, `emergencyContactName` TEXT NOT NULL, `emergencyContactNumber` TEXT NOT NULL, `emergencyContactAddress` TEXT NOT NULL, `hasBankAccount` INTEGER, `ownerOperatorStatus` TEXT NOT NULL, `maritalStatus` TEXT NOT NULL, `physicalAddress` TEXT NOT NULL, `personName` TEXT NOT NULL, `nationality` TEXT NOT NULL, `syncStatus` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `syncRetryCount` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "agentId",
+            "columnName": "agentId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "county",
+            "columnName": "county",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "category",
+            "columnName": "category",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "umbrellaType",
+            "columnName": "umbrellaType",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "businessName",
+            "columnName": "businessName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "personCount",
+            "columnName": "personCount",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "gender",
+            "columnName": "gender",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "idType",
+            "columnName": "idType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "idNumber",
+            "columnName": "idNumber",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "contactNumber",
+            "columnName": "contactNumber",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "latitude",
+            "columnName": "latitude",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "longitude",
+            "columnName": "longitude",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "photoUrl",
+            "columnName": "photoUrl",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "idCardPhotoUrl",
+            "columnName": "idCardPhotoUrl",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "persons",
+            "columnName": "persons",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "originCounty",
+            "columnName": "originCounty",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "moneyRemittance",
+            "columnName": "moneyRemittance",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "educationStatus",
+            "columnName": "educationStatus",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "emergencyContactName",
+            "columnName": "emergencyContactName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "emergencyContactNumber",
+            "columnName": "emergencyContactNumber",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "emergencyContactAddress",
+            "columnName": "emergencyContactAddress",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hasBankAccount",
+            "columnName": "hasBankAccount",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "ownerOperatorStatus",
+            "columnName": "ownerOperatorStatus",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "maritalStatus",
+            "columnName": "maritalStatus",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "physicalAddress",
+            "columnName": "physicalAddress",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "personName",
+            "columnName": "personName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nationality",
+            "columnName": "nationality",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "syncStatus",
+            "columnName": "syncStatus",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "syncRetryCount",
+            "columnName": "syncRetryCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_collections_businessName",
+            "unique": false,
+            "columnNames": [
+              "businessName"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_collections_businessName` ON `${TABLE_NAME}` (`businessName`)"
+          },
+          {
+            "name": "index_collections_county",
+            "unique": false,
+            "columnNames": [
+              "county"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_collections_county` ON `${TABLE_NAME}` (`county`)"
+          },
+          {
+            "name": "index_collections_category",
+            "unique": false,
+            "columnNames": [
+              "category"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_collections_category` ON `${TABLE_NAME}` (`category`)"
+          },
+          {
+            "name": "index_collections_agentId",
+            "unique": false,
+            "columnNames": [
+              "agentId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_collections_agentId` ON `${TABLE_NAME}` (`agentId`)"
+          },
+          {
+            "name": "index_collections_syncStatus",
+            "unique": false,
+            "columnNames": [
+              "syncStatus"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_collections_syncStatus` ON `${TABLE_NAME}` (`syncStatus`)"
+          },
+          {
+            "name": "index_collections_timestamp",
+            "unique": false,
+            "columnNames": [
+              "timestamp"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_collections_timestamp` ON `${TABLE_NAME}` (`timestamp`)"
+          },
+          {
+            "name": "index_collections_maritalStatus",
+            "unique": false,
+            "columnNames": [
+              "maritalStatus"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_collections_maritalStatus` ON `${TABLE_NAME}` (`maritalStatus`)"
+          },
+          {
+            "name": "index_collections_educationStatus",
+            "unique": false,
+            "columnNames": [
+              "educationStatus"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_collections_educationStatus` ON `${TABLE_NAME}` (`educationStatus`)"
+          },
+          {
+            "name": "index_collections_originCounty",
+            "unique": false,
+            "columnNames": [
+              "originCounty"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_collections_originCounty` ON `${TABLE_NAME}` (`originCounty`)"
+          },
+          {
+            "name": "index_collections_gender",
+            "unique": false,
+            "columnNames": [
+              "gender"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_collections_gender` ON `${TABLE_NAME}` (`gender`)"
+          },
+          {
+            "name": "index_collections_idType",
+            "unique": false,
+            "columnNames": [
+              "idType"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_collections_idType` ON `${TABLE_NAME}` (`idType`)"
+          },
+          {
+            "name": "index_collections_ownerOperatorStatus",
+            "unique": false,
+            "columnNames": [
+              "ownerOperatorStatus"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_collections_ownerOperatorStatus` ON `${TABLE_NAME}` (`ownerOperatorStatus`)"
+          },
+          {
+            "name": "index_collections_hasBankAccount",
+            "unique": false,
+            "columnNames": [
+              "hasBankAccount"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_collections_hasBankAccount` ON `${TABLE_NAME}` (`hasBankAccount`)"
+          },
+          {
+            "name": "index_collections_moneyRemittance",
+            "unique": false,
+            "columnNames": [
+              "moneyRemittance"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_collections_moneyRemittance` ON `${TABLE_NAME}` (`moneyRemittance`)"
+          }
+        ]
+      },
+      {
+        "tableName": "collections_fts",
+        "createSql": "CREATE VIRTUAL TABLE IF NOT EXISTS `${TABLE_NAME}` USING FTS4(`businessName` TEXT NOT NULL, `physicalAddress` TEXT NOT NULL, `county` TEXT NOT NULL, `agentId` TEXT NOT NULL, `originCounty` TEXT NOT NULL, `personName` TEXT NOT NULL, `nationality` TEXT NOT NULL, content=`collections`)",
+        "fields": [
+          {
+            "fieldPath": "businessName",
+            "columnName": "businessName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "physicalAddress",
+            "columnName": "physicalAddress",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "county",
+            "columnName": "county",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "agentId",
+            "columnName": "agentId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "originCounty",
+            "columnName": "originCounty",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "personName",
+            "columnName": "personName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nationality",
+            "columnName": "nationality",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": []
+        },
+        "ftsVersion": "FTS4",
+        "ftsOptions": {
+          "tokenizer": "simple",
+          "tokenizerArgs": [],
+          "contentTable": "collections",
+          "languageIdColumnName": "",
+          "matchInfo": "FTS4",
+          "notIndexedColumns": [],
+          "prefixSizes": [],
+          "preferredOrder": "ASC"
+        },
+        "contentSyncTriggers": [
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_collections_fts_BEFORE_UPDATE BEFORE UPDATE ON `collections` BEGIN DELETE FROM `collections_fts` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_collections_fts_BEFORE_DELETE BEFORE DELETE ON `collections` BEGIN DELETE FROM `collections_fts` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_collections_fts_AFTER_UPDATE AFTER UPDATE ON `collections` BEGIN INSERT INTO `collections_fts`(`docid`, `businessName`, `physicalAddress`, `county`, `agentId`, `originCounty`, `personName`, `nationality`) VALUES (NEW.`rowid`, NEW.`businessName`, NEW.`physicalAddress`, NEW.`county`, NEW.`agentId`, NEW.`originCounty`, NEW.`personName`, NEW.`nationality`); END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_collections_fts_AFTER_INSERT AFTER INSERT ON `collections` BEGIN INSERT INTO `collections_fts`(`docid`, `businessName`, `physicalAddress`, `county`, `agentId`, `originCounty`, `personName`, `nationality`) VALUES (NEW.`rowid`, NEW.`businessName`, NEW.`physicalAddress`, NEW.`county`, NEW.`agentId`, NEW.`originCounty`, NEW.`personName`, NEW.`nationality`); END"
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'af479d3f66868e1a3ab3689796e428ea')"
+    ]
+  }
+}

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    res/xml/network_security_config.xml
+
+    PURPOSE: Replaces android:usesCleartextTraffic="true" which was set
+    in the manifest. That flag allows any HTTP traffic from any code path
+    in the app — including third-party libraries — to any host with no
+    encryption. For a financial data collection system this is unacceptable.
+
+    THIS CONFIG:
+      Release builds:  ALL cleartext (HTTP) traffic BLOCKED globally.
+                       Only HTTPS connections permitted.
+                       User-installed CA certificates distrusted.
+      Debug builds:    Cleartext allowed ONLY to localhost (for local dev tools).
+                       User-installed CAs trusted (for Charles Proxy / Proxyman).
+
+    SUPABASE: Supabase uses HTTPS exclusively — this config does not affect it.
+-->
+<network-security-config>
+
+    <!-- Release: HTTPS only, system CAs only -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Debug: allow local development tools -->
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </debug-overrides>
+
+</network-security-config>

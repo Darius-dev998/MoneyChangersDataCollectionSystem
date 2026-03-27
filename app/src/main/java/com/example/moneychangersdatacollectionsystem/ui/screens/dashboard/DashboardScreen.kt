@@ -6,7 +6,7 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -17,16 +17,33 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.moneychangersdatacollectionsystem.ui.components.FinTechBackground
-import com.example.moneychangersdatacollectionsystem.ui.screens.collection.CollectionViewModel
 
+/**
+ * DashboardScreen — Home screen for authenticated field agents.
+ *
+ * FIX: CollectionViewModel REPLACED with DashboardViewModel.
+ *
+ * The original injected CollectionViewModel just to call viewModel.logout().
+ * CollectionViewModel is the heaviest ViewModel in the app — it allocates
+ * 15+ MutableStateFlows, the full 200-country list, form state for every
+ * field, and starts a SharedFlow for paged search immediately on creation.
+ * None of that is needed on the Dashboard.
+ *
+ * DashboardViewModel owns only what this screen needs:
+ *   — agentName: the logged-in agent's display name
+ *   — logout(): delegates to AuthRepository
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
     onNavigateToForm: () -> Unit,
     onNavigateToHistory: () -> Unit,
     onLogout: () -> Unit,
-    viewModel: CollectionViewModel = hiltViewModel()
+    // FIX: DashboardViewModel — appropriate ViewModel for this screen
+    viewModel: DashboardViewModel = hiltViewModel()
 ) {
+    val agentName by viewModel.agentName.collectAsState()
+
     FinTechBackground {
         Scaffold(
             containerColor = Color.Transparent,
@@ -58,13 +75,13 @@ fun DashboardScreen(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "Welcome to MCDCS",
+                    text = "Welcome, $agentName",
                     fontSize = 28.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
-                
+
                 Text(
                     text = "Professional Data Collection System",
                     fontSize = 14.sp,
@@ -131,9 +148,9 @@ fun DashboardCard(
                     Icon(icon, contentDescription = null, modifier = Modifier.size(28.dp))
                 }
             }
-            
+
             Spacer(modifier = Modifier.width(20.dp))
-            
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = title, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Text(text = subtitle, fontSize = 13.sp, modifier = Modifier.alpha(0.7f))

@@ -10,7 +10,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
-import com.example.moneychangersdatacollectionsystem.domain.repository.AuthRepository
 import com.example.moneychangersdatacollectionsystem.ui.screens.auth.LoginScreen
 import com.example.moneychangersdatacollectionsystem.ui.screens.collection.CollectionFormScreen
 import com.example.moneychangersdatacollectionsystem.ui.screens.collection.CollectionViewModel
@@ -21,8 +20,7 @@ import com.example.moneychangersdatacollectionsystem.ui.screens.splash.SplashScr
 
 @Composable
 fun NavGraph(
-    navController: NavHostController,
-    authRepository: AuthRepository
+    navController: NavHostController
 ) {
     NavHost(
         navController = navController,
@@ -30,7 +28,6 @@ fun NavGraph(
     ) {
         composable<Screen.Splash> {
             SplashScreen(
-                authRepository = authRepository,
                 onNavigateToLogin = {
                     navController.navigate(Screen.Login) {
                         popUpTo(Screen.Splash) { inclusive = true }
@@ -43,7 +40,7 @@ fun NavGraph(
                 }
             )
         }
-        
+
         composable<Screen.Login> {
             LoginScreen(
                 onLoginSuccess = {
@@ -70,7 +67,6 @@ fun NavGraph(
             )
         }
 
-        // --- Collection Flow Nested Graph (ViewModel Scoping) ---
         navigation<Screen.CollectionFlow>(
             startDestination = Screen.CollectionForm
         ) {
@@ -87,7 +83,7 @@ fun NavGraph(
                         sharedViewModel.resetCropperNavigation()
                     }
                 }
-                
+
                 CollectionFormScreen(
                     onNavigateBack = {
                         navController.popBackStack()
@@ -101,7 +97,7 @@ fun NavGraph(
                     navController.getBackStackEntry<Screen.CollectionFlow>()
                 }
                 val sharedViewModel: CollectionViewModel = hiltViewModel(parentEntry)
-                
+
                 val imageUri by sharedViewModel.currentPhotoToCrop.collectAsState()
                 if (imageUri != null) {
                     ManualCropScreen(
@@ -118,7 +114,7 @@ fun NavGraph(
                 }
             }
         }
-        
+
         composable<Screen.History> {
             HistoryScreen(
                 onNavigateBack = {

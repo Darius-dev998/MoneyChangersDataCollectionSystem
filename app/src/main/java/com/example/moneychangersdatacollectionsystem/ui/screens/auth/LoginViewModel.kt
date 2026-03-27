@@ -42,9 +42,9 @@ class LoginViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
-            
+
             val result = authRepository.login(_email.value, _password.value)
-            
+
             _isLoading.value = false
             result.onSuccess {
                 _loginSuccess.value = true
